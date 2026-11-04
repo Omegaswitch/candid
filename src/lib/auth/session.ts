@@ -1,5 +1,6 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { assertLocalStandInAllowed, isLocalHost } from "./stand-in";
 
 export type AuthUser = { id: string; email: string | null; name: string | null };
 
@@ -11,14 +12,14 @@ export type AuthUser = { id: string; email: string | null; name: string | null }
 export const authMode: "clerk" | "dev" = process.env.AUTH_MODE === "dev" ? "dev" : "clerk";
 export const DEV_USER_COOKIE = "candid_dev_user";
 
-if (authMode === "dev" && process.env.VERCEL_ENV) {
-  throw new Error("AUTH_MODE=dev is a local stand-in and must not be used on a deployment.");
-}
+if (authMode === "dev") assertLocalStandInAllowed("AUTH_MODE=dev");
 
 /** The signed-in identity, or null. Cheap: Clerk reads the verified session token, no network call. */
 export async function getAuthUserId(): Promise<string | null> {
   if (authMode === "dev") {
-    const email = (await cookies()).get(DEV_USER_COOKIE)?.value;
+    // Only answers on localhost, so a stand-in that is somehow exposed cannot be used remotely.
+    if (!isLocalHost((await headers()).get("host"))) return null;
+    const email = (await cookies()).get(DEV_USER_COOKIE)?.value?.toLowerCase();
     return email ? `dev:${email}` : null;
   }
   const { auth } = await import("@clerk/nextjs/server");

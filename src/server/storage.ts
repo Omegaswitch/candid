@@ -1,7 +1,8 @@
 import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdir, open, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
+import { assertLocalStandInAllowed } from "@/lib/auth/stand-in";
 
 /**
  * Private object storage. Two drivers, chosen by STORAGE_DRIVER:
@@ -20,12 +21,17 @@ export type Storage = {
   /** The first `n` bytes (fewer if the object is shorter). */
   readStart(key: string, n: number): Promise<Uint8Array>;
   remove(key: string): Promise<void>;
+  /** Moves an object to a new key (the old key stops existing). */
+  move(from: string, to: string): Promise<void>;
 };
 
 export const UPLOAD_EXPIRES_S = 5 * 60;
 export const DOWNLOAD_EXPIRES_S = 60;
 
 export const newStorageKey = (workspaceId: string) => `ws/${workspaceId}/${randomUUID()}`;
+/** Browsers upload here; finalize moves the object to a fresh `ws/…` key no upload policy covers.
+ *  Add a bucket lifecycle rule expiring `incoming/` after 1 day to clear abandoned uploads. */
+export const newIncomingKey = (workspaceId: string) => `incoming/ws/${workspaceId}/${randomUUID()}`;
 
 /** RFC 6266 / 5987: an ASCII fallback plus a UTF-8 `filename*`, so Czech names survive. */
 export function contentDisposition(filename: string, inline: boolean) {
@@ -106,6 +112,11 @@ function s3Storage(): Storage {
       const [c, { DeleteObjectCommand }] = await s3();
       await c.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     },
+    async move(from, to) {
+      const [c, { CopyObjectCommand, DeleteObjectCommand }] = await s3();
+      await c.send(new CopyObjectCommand({ Bucket: bucket, CopySource: `${bucket}/${from.split("/").map(encodeURIComponent).join("/")}`, Key: to }));
+      await c.send(new DeleteObjectCommand({ Bucket: bucket, Key: from }));
+    },
   };
 }
 
@@ -120,7 +131,9 @@ const hmacKey = () => {
   if (!k) throw new Error("TOKEN_ENCRYPTION_KEY is required for STORAGE_DRIVER=local");
   return k;
 };
-const sign = (payload: string) => createHmac("sha256", hmacKey()).update(`storage-local:${payload}`).digest("base64url");
+// A key derived for this purpose only, never the raw encryption key.
+const derivedKey = () => createHmac("sha256", hmacKey()).update("candid:storage-local:v1").digest();
+const sign = (payload: string) => createHmac("sha256", derivedKey()).update(payload).digest("base64url");
 
 export function signLocalToken(t: LocalToken) {
   const payload = Buffer.from(JSON.stringify(t)).toString("base64url");
@@ -157,13 +170,13 @@ export async function localPut(key: string, bytes: Uint8Array) {
 }
 
 function localDriver(): Storage {
-  if (process.env.VERCEL_ENV) throw new Error("STORAGE_DRIVER=local is a development stand-in and must not run on a deployment.");
+  assertLocalStandInAllowed("STORAGE_DRIVER=local");
   hmacKey();
   const exp = (s: number) => Date.now() + s * 1000;
   return {
     async presignUpload(key, { contentType, maxBytes }) {
       const token = signLocalToken({ op: "put", key, contentType, maxBytes, exp: exp(UPLOAD_EXPIRES_S) });
-      return { url: "/api/storage-local/upload", fields: { token, "Content-Type": contentType } };
+      return { url: `/api/storage-local/upload?token=${encodeURIComponent(token)}`, fields: { "Content-Type": contentType } };
     },
     async downloadUrl(key, { filename, contentType, inline }) {
       const token = signLocalToken({ op: "get", key, contentType, disposition: contentDisposition(filename, inline), exp: exp(DOWNLOAD_EXPIRES_S) });
@@ -188,6 +201,11 @@ function localDriver(): Storage {
     },
     async remove(key) {
       await rm(localPath(key), { force: true });
+    },
+    async move(from, to) {
+      const dest = localPath(to);
+      await mkdir(dirname(dest), { recursive: true });
+      await rename(localPath(from), dest);
     },
   };
 }

@@ -39,8 +39,24 @@ function requireConfigured() {
 }
 
 /** Only same-site paths, never `//host` or a full URL. */
-export const safeReturnTo = (v: string | null | undefined) =>
-  v && v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\") ? v : "/settings/integrations";
+export function safeReturnTo(v: string | null | undefined) {
+  const fallback = "/settings/integrations";
+  // URL parsing drops tabs/newlines ("/\t/evil" → "//evil"), so refuse control chars and backslashes outright.
+  if (!v || !v.startsWith("/") || /[\x00-\x1f\x7f\\]/.test(v)) return fallback;
+  const base = new URL("http://app.invalid");
+  const u = new URL(v, base);
+  return u.origin === base.origin ? u.pathname + u.search : fallback;
+}
+
+/** Best-effort revoke of a stored (encrypted) token, used when a member is removed. */
+export async function revokeStored(tokenEnc: string | null) {
+  if (!tokenEnc) return;
+  try {
+    await revoke(decrypt(tokenEnc));
+  } catch {
+    // undecryptable (key rotated): nothing to revoke with
+  }
+}
 
 // ---------------------------------------------------------------- OAuth state
 

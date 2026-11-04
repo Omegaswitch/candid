@@ -8,7 +8,7 @@ import { logActivity } from "./activity";
 import type { Ctx } from "./context";
 import { AppError, conflict, notFound } from "./errors";
 import { loadProject } from "./projects";
-import { newStorageKey, storage, type PresignedUpload } from "./storage";
+import { newIncomingKey, newStorageKey, storage, type PresignedUpload } from "./storage";
 
 /** What the browser sees. Never includes `storageKey`. */
 export type DocumentDto = {
@@ -169,6 +169,8 @@ async function topPosition(ctx: Ctx) {
 
 // ---------------------------------------------------------------- uploads
 
+const MAX_PENDING_UPLOADS = 20;
+
 /**
  * Step 1 of an upload. Creates a pending row (hidden until finalized) with a fresh storage key and
  * returns a presigned POST for the browser. For a replacement the pending row only carries the new
@@ -180,12 +182,18 @@ export async function createUpload(
 ): Promise<{ uploadId: string; upload: PresignedUpload }> {
   const input = uploadInput.parse(raw);
   const type = checkDeclared(input.name, input.mimeType, input.size);
+  // shortcut: a per-member cap instead of real rate limiting; add a limiter if abuse appears.
+  const [{ pending }] = await db
+    .select({ pending: sql<number>`count(*)::int` })
+    .from(documents)
+    .where(and(eq(documents.createdBy, ctx.membershipId), isNull(documents.uploadedAt), eq(documents.kind, "file"), isNull(documents.deletedAt)));
+  if (pending >= MAX_PENDING_UPLOADS) throw new AppError("too_large", "Too many uploads in progress. Wait for them to finish and try again.");
   if (input.replaceId) {
     const target = await loadLive(ctx, input.replaceId);
     if (target.kind !== "file") throw new AppError("invalid", "Only uploaded files can be replaced");
   }
   if (input.projectId) await loadProject(ctx, input.projectId);
-  const key = newStorageKey(ctx.workspaceId);
+  const key = newIncomingKey(ctx.workspaceId);
   const [row] = await db
     .insert(documents)
     .values({
@@ -212,7 +220,7 @@ export async function createUpload(
 export async function finalizeUpload(ctx: Ctx, uploadId: string, opts: { replaceId?: string } = {}): Promise<DocumentDto> {
   const pending = await loadDocument(ctx, uploadId);
   if (pending.kind !== "file" || pending.uploadedAt || !pending.storageKey) throw notFound("Upload");
-  const key = pending.storageKey;
+  let key = pending.storageKey;
   const fail = async (e: AppError) => {
     await storage().remove(key).catch(() => {});
     await db.delete(documents).where(eq(documents.id, pending.id));
@@ -220,6 +228,13 @@ export async function finalizeUpload(ctx: Ctx, uploadId: string, opts: { replace
   };
 
   const type = fileTypeOfName(pending.name)!;
+  // Move off the presigned key before checking: a second POST with the same upload policy can then
+  // never swap the object after it has been verified.
+  if (!(await storage().head(key))) throw await fail(reject("invalid", "missing", "The upload did not arrive. Try again."));
+  const verifiedKey = newStorageKey(ctx.workspaceId);
+  await storage().move(key, verifiedKey);
+  key = verifiedKey;
+  await db.update(documents).set({ storageKey: key }).where(eq(documents.id, pending.id));
   const head = await storage().head(key);
   if (!head) throw await fail(reject("invalid", "missing", "The upload did not arrive. Try again."));
   if (head.size > MAX_UPLOAD_BYTES) throw await fail(reject("too_large", "too_large", "The file is larger than 25 MB."));

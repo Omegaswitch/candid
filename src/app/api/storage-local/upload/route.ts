@@ -7,16 +7,18 @@ const fail = (status: number, message: string) => Response.json({ error: { code:
 
 export async function POST(req: NextRequest) {
   if (process.env.STORAGE_DRIVER !== "local") return fail(404, "Not found");
-  const length = Number(req.headers.get("content-length") ?? 0);
+  // Authorise and size-check BEFORE reading the body.
+  const t = verifyLocalToken(req.nextUrl.searchParams.get("token"));
+  if (!t || t.op !== "put") return fail(403, "Upload link is invalid or has expired");
+  const length = Number(req.headers.get("content-length"));
+  if (!length) return fail(411, "Content-Length is required");
+  if (length > t.maxBytes + 64 * 1024) return fail(413, "File is too large");
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
     return fail(400, "Expected multipart form data");
   }
-  const t = verifyLocalToken(form.get("token") as string | null);
-  if (!t || t.op !== "put") return fail(403, "Upload link is invalid or has expired");
-  if (length > t.maxBytes + 64 * 1024) return fail(413, "File is too large");
   if (form.get("Content-Type") !== t.contentType) return fail(403, "Content-Type does not match the upload policy");
   const file = form.get("file");
   if (!(file instanceof Blob)) return fail(400, "Missing file");

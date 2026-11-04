@@ -90,11 +90,16 @@ export async function changeRole(ctx: Ctx, id: string, raw: z.input<typeof roleI
 /** Soft remove: status "removed" keeps their name on past activity. Their Google tokens are deleted. */
 export async function removeMember(ctx: Ctx, id: string) {
   requireAdmin(ctx);
+  const revoked: (string | null)[] = [];
   await db.transaction(async (tx) => {
     const m = await loadMember(ctx, id, tx);
     if (m.role === "admin" && m.status === "active") await assertAnotherAdmin(ctx, id, tx);
     await tx.update(memberships).set({ status: "removed", updatedAt: new Date() }).where(eq(memberships.id, id));
-    await tx.delete(integrationConnections).where(eq(integrationConnections.membershipId, id));
+    const conns = await tx.delete(integrationConnections).where(eq(integrationConnections.membershipId, id)).returning();
+    revoked.push(...conns.map((c) => c.refreshTokenEnc ?? c.accessTokenEnc));
     await logActivity(ctx, { entityType: "member", entityId: id, action: "removed" }, tx);
   });
+  // Also end their Google grant at Google, after the tokens are gone from our database.
+  const { revokeStored } = await import("./google");
+  await Promise.all(revoked.map(revokeStored));
 }

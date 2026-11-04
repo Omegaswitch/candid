@@ -54,6 +54,7 @@ async function claimInvite(userId: string): Promise<Ctx | null> {
     .select()
     .from(memberships)
     .where(and(eq(memberships.email, email), eq(memberships.status, "invited"), isNull(memberships.userId)))
+    .orderBy(memberships.createdAt)
     .limit(1);
   if (invite) {
     const [bound] = await db
@@ -65,15 +66,21 @@ async function claimInvite(userId: string): Promise<Ctx | null> {
   }
 
   if (!bootstrapAdmins().includes(email)) return null;
+  // Bootstrap only creates the FIRST admin of an empty workspace. It never revives a removed
+  // member or takes over an existing membership row.
   const ws = await ensureDefaultWorkspace();
+  const [anyAdmin] = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(and(eq(memberships.workspaceId, ws.id), eq(memberships.role, "admin"), eq(memberships.status, "active")))
+    .limit(1);
+  if (anyAdmin) return null;
   const [admin] = await db
     .insert(memberships)
     .values({ workspaceId: ws.id, userId, email, displayName: profile?.name, role: "admin", status: "active" })
-    .onConflictDoUpdate({
-      target: [memberships.workspaceId, memberships.email],
-      set: { userId, status: "active", role: "admin", updatedAt: new Date() },
-    })
+    .onConflictDoNothing()
     .returning();
+  if (!admin) return null;
   return toCtx(userId, admin);
 }
 

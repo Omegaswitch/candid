@@ -14,6 +14,7 @@ type Handler = (args: { ctx: Ctx; req: NextRequest; params: Record<string, strin
 export function route(handler: Handler, opts: { role?: Role } = {}) {
   return async (req: NextRequest, args: RouteArgs) => {
     try {
+      assertSameOrigin(req);
       const ctx = await requireCtx(opts.role);
       const params = (await args?.params) ?? {};
       const out = await handler({ ctx, req, params });
@@ -24,6 +25,17 @@ export function route(handler: Handler, opts: { role?: Role } = {}) {
       return errorResponse(e);
     }
   };
+}
+
+const SAFE = new Set(["GET", "HEAD", "OPTIONS"]);
+/** CSRF defence beyond SameSite: writes must come from our own pages (Origin), never cross-site. */
+export function assertSameOrigin(req: NextRequest) {
+  if (SAFE.has(req.method)) return;
+  const origin = req.headers.get("origin");
+  const allowed = new Set([req.nextUrl.origin, process.env.APP_URL].filter(Boolean));
+  if (origin ? !allowed.has(origin) : req.headers.get("sec-fetch-site") === "cross-site") {
+    throw new AppError("forbidden", "Cross-site request refused");
+  }
 }
 
 export function errorResponse(e: unknown) {
@@ -41,6 +53,10 @@ export function errorResponse(e: unknown) {
 }
 
 export async function body<T>(req: NextRequest, schema: ZodType<T>): Promise<T> {
+  // Only real JSON requests: a plain HTML form (text/plain) cannot reach these endpoints.
+  if (!req.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+    throw new AppError("unsupported", "Request body must be application/json");
+  }
   let json: unknown;
   try {
     json = await req.json();

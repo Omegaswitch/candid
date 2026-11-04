@@ -40,7 +40,7 @@ const EXE = new Uint8Array([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);
 /** Runs the real two-step flow against the local driver, writing `bytes` where the browser would. */
 async function upload(ctx: Ctx, name: string, mimeType: string, bytes: Uint8Array, replaceId?: string) {
   const { uploadId, upload } = await createUpload(ctx, { name, mimeType, size: bytes.length, replaceId });
-  const token = verifyLocalToken(upload.fields.token)!;
+  const token = verifyLocalToken(new URL(upload.url, "http://x").searchParams.get("token"))!;
   expect(token.op).toBe("put");
   await localPut(token.key, bytes);
   return finalizeUpload(ctx, uploadId, { replaceId });
@@ -86,7 +86,7 @@ describe("document uploads", () => {
   it("rejects a renamed executable: deletes the object and the pending row, returns 422", async () => {
     const ctx = await makeCtx();
     const { uploadId, upload: up } = await createUpload(ctx, { name: "invoice.pdf", mimeType: "application/pdf", size: EXE.length });
-    const key = verifyLocalToken(up.fields.token)!.key;
+    const key = verifyLocalToken(new URL(up.url, "http://x").searchParams.get("token"))!.key;
     await localPut(key, EXE);
     const err = await finalizeUpload(ctx, uploadId).catch((e) => e);
     expect(err).toMatchObject({ code: "invalid", status: 422, details: { reason: "verification" } });
@@ -166,5 +166,19 @@ describe("document access", () => {
     const token = verifyLocalToken(new URL(location, "http://x").searchParams.get("token"));
     expect(token).toMatchObject({ op: "get", contentType: "application/pdf" });
     expect(token && "disposition" in token && token.disposition).toMatch(/^inline;/);
+  });
+});
+
+describe("security regressions (audit)", () => {
+  it("a second POST with the same upload link cannot swap a verified file", async () => {
+    const ctx = await makeCtx();
+    const { uploadId, upload: up } = await createUpload(ctx, { name: "ok.pdf", mimeType: "application/pdf", size: PDF.length });
+    const token = verifyLocalToken(new URL(up.url, "http://x").searchParams.get("token"))!;
+    await localPut(token.key, PDF);
+    const doc = await finalizeUpload(ctx, uploadId);
+    await localPut(token.key, EXE); // replay of the presigned upload after verification
+    const [row] = await db.select().from(documents).where(eq(documents.id, doc.id));
+    expect(row.storageKey).not.toBe(token.key);
+    expect(await storage().readStart(row.storageKey!, 4)).toEqual(PDF.subarray(0, 4));
   });
 });
