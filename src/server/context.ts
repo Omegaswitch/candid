@@ -66,15 +66,10 @@ async function claimInvite(userId: string): Promise<Ctx | null> {
   }
 
   if (!bootstrapAdmins().includes(email)) return null;
-  // Bootstrap only creates the FIRST admin of an empty workspace. It never revives a removed
-  // member or takes over an existing membership row.
+  // Bootstrap creates an admin for a listed email that has no membership row yet. The unique
+  // (workspace, email) index makes this a no-op for an existing row, so a removed member is never
+  // revived and an existing membership is never taken over.
   const ws = await ensureDefaultWorkspace();
-  const [anyAdmin] = await db
-    .select({ id: memberships.id })
-    .from(memberships)
-    .where(and(eq(memberships.workspaceId, ws.id), eq(memberships.role, "admin"), eq(memberships.status, "active")))
-    .limit(1);
-  if (anyAdmin) return null;
   const [admin] = await db
     .insert(memberships)
     .values({ workspaceId: ws.id, userId, email, displayName: profile?.name, role: "admin", status: "active" })
