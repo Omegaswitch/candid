@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/app/providers";
@@ -10,10 +10,24 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin", "latin-ext"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin", "latin-ext"] });
 
+// Link previews (Teams, Slack, email) show the app name, one line and the static OG image
+// (src/app/opengraph-image.tsx). Nothing per page or per project is ever exposed here.
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_URL || "http://localhost:3000"),
   title: { default: t.common.appName, template: `%s · ${t.common.appName}` },
-  description: "Projects, checklists, notes and documents for the team.",
-  robots: { index: false, follow: false },
+  description: t.common.tagline,
+  applicationName: t.common.appName,
+  robots: { index: false, follow: false, nocache: true },
+  openGraph: { type: "website", siteName: t.common.appName, title: t.common.appName, description: t.common.tagline, locale: "en" },
+  twitter: { card: "summary_large_image", title: t.common.appName, description: t.common.tagline },
+};
+
+// The ground colour of each theme (globals.css --ground), for the browser chrome.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f4f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,5 +1,6 @@
 export const common = {
   appName: "Candid",
+  tagline: "Projects, checklists, notes and documents for the team.",
   save: "Save",
   saving: "Saving…",
   saved: "Saved",
