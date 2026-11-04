@@ -156,17 +156,20 @@ function ProgressBar({ value }: { value: number }) {
 }
 
 /** Browser → bucket, directly, with progress. Resolves when the storage service accepted the file. */
-function postToStorage(upload: { url: string; fields: Record<string, string> }, file: File, onProgress: (pct: number) => void) {
+type Upload = { url: string; fields: Record<string, string>; method?: "POST" | "PUT"; headers?: Record<string, string> };
+function postToStorage(upload: Upload, file: File, onProgress: (pct: number) => void) {
   return new Promise<void>((resolve, reject) => {
-    const form = new FormData();
-    for (const [k, v] of Object.entries(upload.fields)) form.append(k, v);
-    form.append("file", file); // must be last for S3
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", upload.url);
+    xhr.open(upload.method ?? "POST", upload.url);
+    for (const [k, v] of Object.entries(upload.headers ?? {})) xhr.setRequestHeader(k, v);
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
     xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(xhr.status === 413 ? s.upload.tooLarge : s.upload.storage)));
     xhr.onerror = () => reject(new Error(s.upload.network));
     xhr.onabort = () => reject(new Error(s.upload.network));
+    if (upload.method === "PUT") return xhr.send(file);
+    const form = new FormData();
+    for (const [k, v] of Object.entries(upload.fields)) form.append(k, v);
+    form.append("file", file); // must be last for a form upload
     xhr.send(form);
   });
 }
@@ -184,7 +187,7 @@ async function uploadOne(qc: QueryClient, file: File, opts: { projectId?: string
   try {
     // Some systems report no type for known extensions; the server still checks the first bytes.
     const mimeType = file.type || FILE_TYPES[type].mime;
-    const { uploadId, upload } = await api<{ uploadId: string; upload: { url: string; fields: Record<string, string> } }>("/api/documents/uploads", {
+    const { uploadId, upload } = await api<{ uploadId: string; upload: Upload }>("/api/documents/uploads", {
       method: "POST",
       json: { name: file.name, mimeType, size: file.size, projectId: opts.projectId ?? undefined, replaceId: opts.replaceId },
     });

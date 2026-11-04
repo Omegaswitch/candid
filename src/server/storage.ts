@@ -12,9 +12,10 @@ import { assertLocalStandInAllowed } from "@/lib/auth/stand-in";
  *   short-lived URLs to /api/storage-local/*. It refuses to run on Vercel.
  * Credentials and object keys stay on the server.
  */
-export type PresignedUpload = { url: string; fields: Record<string, string> };
+/** POST = form upload (local driver); PUT = raw body with the signed headers (S3/R2: R2 has no presigned POST). */
+export type PresignedUpload = { url: string; fields: Record<string, string>; method?: "POST" | "PUT"; headers?: Record<string, string> };
 export type Storage = {
-  presignUpload(key: string, opts: { contentType: string; maxBytes: number }): Promise<PresignedUpload>;
+  presignUpload(key: string, opts: { contentType: string; maxBytes: number; size: number }): Promise<PresignedUpload>;
   downloadUrl(key: string, opts: { filename: string; contentType: string; inline: boolean }): Promise<string>;
   /** Size of the stored object, or null when it does not exist. */
   head(key: string): Promise<{ size: number } | null>;
@@ -72,15 +73,16 @@ function s3Storage(): Storage {
   const s3 = () => Promise.all([client, import("@aws-sdk/client-s3")]);
 
   return {
-    async presignUpload(key, { contentType, maxBytes }) {
-      const [[c], { createPresignedPost }] = await Promise.all([s3(), import("@aws-sdk/s3-presigned-post")]);
-      return createPresignedPost(c, {
-        Bucket: bucket,
-        Key: key,
-        Fields: { "Content-Type": contentType },
-        Conditions: [["content-length-range", 1, maxBytes], ["eq", "$Content-Type", contentType]],
-        Expires: UPLOAD_EXPIRES_S,
+    async presignUpload(key, { contentType, maxBytes, size }) {
+      // Presigned PUT (works on AWS S3 and Cloudflare R2). Type and exact length are signed, so the
+      // browser cannot send another type or size; finalize still re-checks size and content.
+      const [[c, { PutObjectCommand }], { getSignedUrl }] = await Promise.all([s3(), import("@aws-sdk/s3-request-presigner")]);
+      const length = Math.min(size, maxBytes);
+      const url = await getSignedUrl(c, new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType, ContentLength: length }), {
+        expiresIn: UPLOAD_EXPIRES_S,
+        signableHeaders: new Set(["content-type", "content-length"]),
       });
+      return { url, fields: {}, method: "PUT", headers: { "Content-Type": contentType } };
     },
     async downloadUrl(key, { filename, contentType, inline }) {
       const [[c, { GetObjectCommand }], { getSignedUrl }] = await Promise.all([s3(), import("@aws-sdk/s3-request-presigner")]);

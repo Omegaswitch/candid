@@ -208,7 +208,7 @@ export async function createUpload(
       createdBy: ctx.membershipId,
     })
     .returning();
-  const upload = await storage().presignUpload(key, { contentType: FILE_TYPES[type].mime, maxBytes: MAX_UPLOAD_BYTES });
+  const upload = await storage().presignUpload(key, { contentType: FILE_TYPES[type].mime, maxBytes: MAX_UPLOAD_BYTES, size: input.size });
   return { uploadId: row.id, upload };
 }
 
