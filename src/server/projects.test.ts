@@ -51,3 +51,31 @@ describe("partial updates", () => {
     expect(done).toMatchObject({ note: "keep me", waiting: true, done: true });
   });
 });
+
+describe("permanent delete", () => {
+  it("is refused until the project is archived, then removes it and its tasks", async () => {
+    const { deleteArchivedProject, setArchived } = await import("./projects");
+    const ctx = await makeCtx();
+    const p = await createProject(ctx, { name: "Delete me", tasks: [{ title: "a" }] });
+    await expect(deleteArchivedProject(ctx, p.id)).rejects.toMatchObject({ code: "invalid" });
+    await setArchived(ctx, p.id, true);
+    await deleteArchivedProject(ctx, p.id);
+    await expect(getProject(ctx, p.id)).rejects.toMatchObject({ code: "not_found" });
+  });
+  it("another workspace cannot delete it", async () => {
+    const { deleteArchivedProject, setArchived } = await import("./projects");
+    const a = await makeCtx();
+    const b = await makeCtx();
+    const p = await createProject(a, { name: "Mine" });
+    await setArchived(a, p.id, true);
+    await expect(deleteArchivedProject(b, p.id)).rejects.toMatchObject({ code: "not_found" });
+  });
+  it("new projects start with the default checklist", async () => {
+    const { ensureDefaultTemplates } = await import("./templates");
+    const ctx = await makeCtx();
+    await ensureDefaultTemplates(ctx);
+    const p = await createProject(ctx, { name: "Defaulted" });
+    const { tasks } = await getProject(ctx, p.id);
+    expect(tasks.map((x) => x.title)).toEqual(["Candidate outreach", "Write email", "Invoicing", "Presentation"]);
+  });
+});

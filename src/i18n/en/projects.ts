@@ -26,6 +26,10 @@ export const projects = {
   progress: "{done} of {total} completed",
   noTasks: "No tasks yet",
   next: "Next",
+  dueLabel: "Due",
+  progressLabel: "Progress",
+  completedShort: "done",
+  allDoneShort: "all done",
   allDone: "All tasks completed",
   owner: "Owner",
   noOwner: "No owner",
@@ -118,6 +122,11 @@ export const projects = {
   },
 
   archive: {
+    delete: "Delete",
+    deleteTitle: "Delete “{name}” permanently?",
+    deleteBody: "The project, its checklist, notes and history are removed for everyone. This cannot be undone. Its documents stay in the document shelf.",
+    deleteConfirm: "Delete permanently",
+    deleted: "“{name}” was deleted.",
     title: "Archive",
     subline: "{n} archived, newest first. Restoring puts a project back on All projects.",
     sublineEmpty: "Archived projects are kept here and can be restored.",

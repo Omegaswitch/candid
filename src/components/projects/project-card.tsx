@@ -110,12 +110,29 @@ export const ProjectCard = memo(function ProjectCard({
       ref={drag?.ref}
       style={drag?.style}
       className={cn(
-        "group relative flex flex-col gap-3 rounded-lg border bg-card p-4 transition-[border-color,box-shadow] duration-150 hover:border-foreground/25 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50",
+        "group relative flex flex-col gap-4 rounded-xl border bg-card p-5 transition-[border-color,box-shadow] duration-150 hover:border-foreground/25 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50",
         drag?.dragging && "z-20 border-foreground/30 shadow-md",
       )}
     >
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
+      <div className="absolute right-2 top-2 flex items-center">
+        {drag?.handle && (
+          <Button
+            ref={handleRef}
+            variant="ghost"
+            size="icon-sm"
+            className="relative z-10 cursor-grab touch-none text-muted-foreground active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+            aria-label={fmt(t.projects.dragHandle, { name: p.name })}
+            {...handleProps}
+          >
+            <GripVertical />
+          </Button>
+        )}
+        <ProjectMenu p={p} actions={actions} index={index} count={count} />
+      </div>
+
+      <div className="flex flex-col items-center gap-3 pt-1 text-center">
+        <ProgressRing done={p.doneCount} total={p.taskCount} size={128} ticks caption={t.projects.completedShort} />
+        <div className="w-full min-w-0 px-6">
           <a
             href={`/projects/${p.id}`}
             onClick={(e) => openOnClick(e, () => actions.open(p.id))}
@@ -125,51 +142,29 @@ export const ProjectCard = memo(function ProjectCard({
           </a>
           <div className="truncate text-[13px] text-muted-foreground">{p.client ?? t.common.none}</div>
         </div>
-        <div className="-mr-1.5 -mt-1 flex items-center">
-          {drag?.handle && (
-            <Button
-              ref={handleRef}
-              variant="ghost"
-              size="icon-sm"
-              className="relative z-10 cursor-grab touch-none text-muted-foreground active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-              aria-label={fmt(t.projects.dragHandle, { name: p.name })}
-              {...handleProps}
-            >
-              <GripVertical />
-            </Button>
-          )}
-          <ProjectMenu p={p} actions={actions} index={index} count={count} />
-        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <ProgressRing done={p.doneCount} total={p.taskCount} />
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
-          <span className="num text-muted-foreground">
-            {p.taskCount ? fmt(t.projects.progress, { done: p.doneCount, total: p.taskCount }) : t.projects.noTasks}
-          </span>
-          <DueLabel date={p.dueDate} done={p.status === "completed"} today={today} />
+      <dl className="mt-auto grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-4 text-sm">
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">{t.projects.next}</dt>
+          <dd className="truncate">{p.nextTask ? p.nextTask.title : <span className="text-muted-foreground">{p.taskCount ? t.projects.allDone : t.common.none}</span>}</dd>
         </div>
-      </div>
-
-      <div className="min-w-0 text-sm">
-        {p.nextTask ? (
-          <div className="flex min-w-0 items-baseline gap-1.5">
-            <span className="flex-none text-xs text-muted-foreground">{t.projects.next}</span>
-            <span className="truncate">{p.nextTask.title}</span>
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">{t.projects.dueLabel}</dt>
+          <dd><DueLabel date={p.dueDate} done={p.status === "completed"} today={today} /></dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">{t.projects.progressLabel}</dt>
+          <dd className="num">{p.taskCount ? fmt(t.projects.progress, { done: p.doneCount, total: p.taskCount }) : t.projects.noTasks}</dd>
+        </div>
+        <div className="flex min-w-0 items-end justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <StatusPill status={p.status} />
+            {p.priority === "high" && <HighPriority />}
           </div>
-        ) : (
-          <span className="text-muted-foreground">{p.taskCount ? t.projects.allDone : t.common.none}</span>
-        )}
-      </div>
-
-      <div className="mt-auto flex items-center gap-2">
-        <StatusPill status={p.status} />
-        {p.priority === "high" && <HighPriority />}
-        <span className="ml-auto">
           <Initials name={ownerName} />
-        </span>
-      </div>
+        </div>
+      </dl>
     </div>
   );
 });

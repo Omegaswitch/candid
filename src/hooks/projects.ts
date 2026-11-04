@@ -38,7 +38,7 @@ export function useTaskView(view: TaskViewName) {
   });
 }
 
-export type Template = { id: string; name: string; description: string | null; tasks: { id: string; title: string }[] };
+export type Template = { id: string; name: string; description: string | null; isDefault?: boolean; tasks: { id: string; title: string }[] };
 /** Templates are optional: a missing endpoint or an error simply means "no templates". */
 export function useTemplates(enabled = true) {
   return useQuery({

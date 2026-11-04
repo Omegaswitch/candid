@@ -1,0 +1,3 @@
+ALTER TABLE "project_templates" ADD COLUMN "is_default" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "templates_ws_default_uq" ON "project_templates" USING btree ("workspace_id") WHERE "project_templates"."is_default" and "project_templates"."archived_at" is null;--> statement-breakpoint
+UPDATE "project_templates" t SET "is_default" = true WHERE t."archived_at" IS NULL AND NOT EXISTS (SELECT 1 FROM "project_templates" d WHERE d."workspace_id" = t."workspace_id" AND d."is_default" AND d."archived_at" IS NULL) AND t."id" = (SELECT x."id" FROM "project_templates" x WHERE x."workspace_id" = t."workspace_id" AND x."archived_at" IS NULL ORDER BY x."created_at" LIMIT 1);

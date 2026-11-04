@@ -9,9 +9,26 @@ import { cn } from "@/lib/utils";
  * travels from the progress blue to the done green as the project nears completion, and the ring
  * closes with a tick at 100%. Transitions are CSS, so reduced motion turns them off globally.
  */
-export function ProgressRing({ done, total, size = 44, className }: { done: number; total: number; size?: number; className?: string }) {
-  const stroke = size >= 52 ? 5 : 4;
-  const r = (size - stroke) / 2;
+export function ProgressRing({
+  done,
+  total,
+  size = 44,
+  ticks = false,
+  caption,
+  className,
+}: {
+  done: number;
+  total: number;
+  size?: number;
+  /** Short marks outside the ring, one per step (the large card ring). */
+  ticks?: boolean;
+  /** A small word under the count, e.g. "completed". */
+  caption?: string;
+  className?: string;
+}) {
+  const stroke = size >= 96 ? 9 : size >= 52 ? 5 : 4;
+  const tickLen = ticks ? Math.max(5, size * 0.06) : 0;
+  const r = (size - stroke) / 2 - (ticks ? tickLen + 3 : 0);
   const c = 2 * Math.PI * r;
   const ratio = total ? done / total : 0;
   const complete = total > 0 && done === total;
@@ -43,6 +60,28 @@ export function ProgressRing({ done, total, size = 44, className }: { done: numb
             />
           );
         })}
+        {ticks &&
+          total > 0 &&
+          Array.from({ length: Math.min(total, 60) }, (_, i) => {
+            const n = Math.min(total, 60);
+            const a = ((i + 0.5) / n) * 2 * Math.PI;
+            const r1 = r + stroke / 2 + 3;
+            const r2 = r1 + tickLen;
+            const lit = i < Math.round((done / total) * n);
+            return (
+              <line
+                key={`t${i}`}
+                x1={size / 2 + r1 * Math.cos(a)}
+                y1={size / 2 + r1 * Math.sin(a)}
+                x2={size / 2 + r2 * Math.cos(a)}
+                y2={size / 2 + r2 * Math.sin(a)}
+                strokeWidth={2}
+                strokeLinecap="round"
+                className="stroke-border"
+                style={lit ? { stroke: colour, transition: "stroke 250ms ease" } : { transition: "stroke 250ms ease" }}
+              />
+            );
+          })}
         {!segmented && total > 0 && (
           <circle
             cx={size / 2}
@@ -56,12 +95,17 @@ export function ProgressRing({ done, total, size = 44, className }: { done: numb
           />
         )}
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center">
+      <span className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
         {complete ? (
           <Check className="text-positive" style={{ width: size * 0.42, height: size * 0.42 }} strokeWidth={2.6} aria-hidden />
         ) : (
-          <span className="num font-medium leading-none" style={{ fontSize: Math.max(11, size * 0.26) }} aria-hidden>
+          <span className="num font-semibold leading-none tracking-tight" style={{ fontSize: Math.max(11, size * 0.24) }} aria-hidden>
             {total ? `${done}/${total}` : "–"}
+          </span>
+        )}
+        {caption && size >= 96 && (
+          <span className="text-[11px] leading-none text-muted-foreground" aria-hidden>
+            {complete ? t.projects.allDoneShort : caption}
           </span>
         )}
       </span>

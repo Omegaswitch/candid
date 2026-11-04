@@ -1,7 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMembers } from "@/hooks/queries";
 import { useArchivedProjects, useSetArchived } from "@/hooks/projects";
@@ -26,7 +40,18 @@ export function ArchiveList() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{a.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {items.length ? fmt(a.subline, { n: q.hasNextPage ? `${items.length}+` : items.length }) : a.sublineEmpty}
+          {q.isPending ? (
+            a.subline.split("{n}").map((part, i) => (
+              <span key={i}>
+                {i > 0 && <Skeleton className="inline-block h-3.5 w-6 align-[-2px]" />}
+                {part}
+              </span>
+            ))
+          ) : items.length ? (
+            fmt(a.subline, { n: q.hasNextPage ? `${items.length}+` : items.length })
+          ) : (
+            a.sublineEmpty
+          )}
         </p>
       </header>
 
@@ -38,14 +63,16 @@ export function ArchiveList() {
           </Button>
         </div>
       ) : q.isPending ? (
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-lg border bg-card" aria-busy aria-label={t.common.loading}>
           {Array.from({ length: 5 }, (_, i) => (
             <div key={i} className="flex h-16 items-center gap-4 border-b px-4 last:border-0">
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-4 w-1/3" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Skeleton className="h-3.5 w-1/3" />
                 <Skeleton className="h-3 w-1/5" />
               </div>
-              <Skeleton className="h-8 w-20" />
+              <Skeleton className="hidden h-1.5 w-40 sm:block" />
+              <Skeleton className="hidden h-5 w-16 rounded-full md:block" />
+              <Skeleton className="h-7 w-[72px]" />
             </div>
           ))}
         </div>
@@ -77,9 +104,12 @@ export function ArchiveList() {
                   </div>
                 </div>
                 <StatusPill status={p.status} className="hidden md:inline-flex" />
-                <Button variant="outline" size="sm" onClick={() => setArchived.mutate({ id: p.id, archived: false, name: p.name })}>
-                  {a.restore}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setArchived.mutate({ id: p.id, archived: false, name: p.name })}>
+                    {a.restore}
+                  </Button>
+                  <DeleteForever id={p.id} name={p.name} />
+                </div>
               </li>
             ))}
           </ul>
@@ -95,5 +125,41 @@ export function ArchiveList() {
       )}
       <ProjectSheet projectId={openId} onClose={() => setOpenId(null)} />
     </div>
+  );
+}
+
+/** Permanent delete: archived projects only, behind a confirmation that names the project. No undo. */
+function DeleteForever({ id, name }: { id: string; name: string }) {
+  const qc = useQueryClient();
+  const del = useMutation({
+    mutationFn: () => api(`/api/projects/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success(fmt(t.projects.archive.deleted, { name }));
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["counts"] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-negative hover:text-negative" disabled={del.isPending}>
+          {t.projects.archive.delete}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{fmt(t.projects.archive.deleteTitle, { name })}</AlertDialogTitle>
+          <AlertDialogDescription>{t.projects.archive.deleteBody}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={() => del.mutate()}>
+            {t.projects.archive.deleteConfirm}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

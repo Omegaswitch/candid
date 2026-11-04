@@ -200,11 +200,15 @@ export function Dashboard() {
           </Button>
         </div>
       ) : !all ? (
-        <CardGrid>
-          {Array.from({ length: 6 }, (_, i) => (
-            <CardSkeleton key={i} />
-          ))}
-        </CardGrid>
+        view === "table" ? (
+          <TableSkeleton />
+        ) : (
+          <CardGrid>
+            {Array.from({ length: 6 }, (_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </CardGrid>
+        )
       ) : shown.length === 0 ? (
         <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
           {filtered ? (
@@ -289,21 +293,58 @@ function CountLink({
 }
 
 function CardGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(272px,1fr))]">{children}</div>;
+  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">{children}</div>;
 }
 
+/** Same boxes as ProjectCard (ring, title, client, two-column info), so nothing moves when data lands. */
 function CardSkeleton() {
   return (
-    <div className="flex h-[178px] flex-col gap-3 rounded-lg border bg-card p-4" aria-hidden>
-      <Skeleton className="h-5 w-2/3" />
-      <Skeleton className="-mt-1.5 h-4 w-1/3" />
-      <Skeleton className="mt-1 h-1.5 w-full" />
-      <Skeleton className="h-3 w-1/2" />
-      <Skeleton className="h-4 w-3/4" />
-      <div className="mt-auto flex justify-between">
-        <Skeleton className="h-5 w-16 rounded-full" />
-        <Skeleton className="size-6 rounded-full" />
+    <div className="flex flex-col gap-4 rounded-xl border bg-card p-5" aria-hidden>
+      <div className="flex flex-col items-center gap-3 pt-1">
+        <Skeleton className="size-32 rounded-full" />
+        <div className="flex w-full flex-col items-center px-6">
+          <div className="flex h-6 items-center"><Skeleton className="h-4 w-40" /></div>
+          <div className="flex h-[19px] items-center"><Skeleton className="h-3 w-24" /></div>
+        </div>
       </div>
+      <div className="mt-auto grid grid-cols-2 gap-x-4 gap-y-3 border-t pt-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="grid gap-1">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The table view's frame: the real column headers at once, rows at the row height (48px from sm). */
+function TableSkeleton() {
+  const th = t.projects.table;
+  return (
+    <div className="overflow-hidden rounded-lg border bg-card" aria-hidden>
+      <div className="hidden h-9 items-center gap-4 border-b pl-4 pr-2 text-xs text-muted-foreground sm:flex">
+        <span className="w-6" />
+        <span className="w-[34%] xl:w-[27%]">{th.name}</span>
+        <span className="w-[13%] xl:w-[11%]">{th.status}</span>
+        <span className="w-[19%] xl:w-[15%]">{th.progress}</span>
+        <span className="hidden flex-1 xl:block">{th.next}</span>
+        <span className="w-[14%] xl:w-[12%]">{th.owner}</span>
+        <span className="ml-auto text-right">{th.due}</span>
+      </div>
+      {Array.from({ length: 8 }, (_, i) => (
+        <div key={i} className="flex h-[88px] items-center gap-4 border-b px-4 last:border-0 sm:h-12">
+          <Skeleton className="size-4" />
+          <div className="flex w-[34%] flex-col gap-1 xl:w-[27%]">
+            <Skeleton className="h-3.5 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
+          </div>
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="hidden h-1.5 w-[15%] sm:block" />
+          <Skeleton className="ml-auto h-3.5 w-16" />
+        </div>
+      ))}
     </div>
   );
 }

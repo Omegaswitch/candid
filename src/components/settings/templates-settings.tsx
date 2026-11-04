@@ -45,7 +45,7 @@ export function TemplatesSettings() {
 
   return (
     <>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-2 flex min-h-9 flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{s.title}</h1>
         {isAdmin && list.isSuccess && templates.length > 0 && !drafting && (
           <Button variant="outline" size="lg" onClick={() => setDrafting(true)}>
@@ -60,11 +60,14 @@ export function TemplatesSettings() {
 
       {list.isPending ? (
         <SettingsSection title={s.listTitle}>
-          <div aria-hidden className="flex flex-col gap-3">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-2/3" />
-          </div>
+          <ol aria-busy aria-label={t.common.loading} className="flex flex-col">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="flex h-10 items-center gap-3 border-t first:border-t-0">
+                <span className="w-5" />
+                <Skeleton className={`h-3.5 ${i % 2 ? "w-1/2" : "w-2/3"}`} />
+              </li>
+            ))}
+          </ol>
         </SettingsSection>
       ) : list.isError ? (
         <SettingsSection title={s.listTitle}>
@@ -103,7 +106,16 @@ export function TemplatesSettings() {
 
 function TemplateReadOnly({ template }: { template: TemplateDto }) {
   return (
-    <SettingsSection title={template.name} description={template.description} aside={<p className="num">{plural(template.tasks.length, s.taskCount)}</p>}>
+    <SettingsSection
+      title={template.name}
+      description={template.description}
+      aside={
+        <div className="grid gap-2">
+          <p className="num">{plural(template.tasks.length, s.taskCount)}</p>
+          {template.isDefault && <DefaultPill />}
+        </div>
+      }
+    >
       {template.tasks.length === 0 ? (
         <p className="text-muted-foreground">{s.noTasks}</p>
       ) : (
@@ -178,6 +190,15 @@ function TemplateEditor({ template, onDone }: { template: TemplateDto | null; on
         qc.invalidateQueries({ queryKey: qk.templates() });
       } else setNotice(e.message);
     },
+  });
+
+  const makeDefault = useMutation({
+    mutationFn: () => api(`/api/templates/${template!.id}/default`, { method: "POST" }),
+    onSuccess: () => {
+      toast.success(fmt(s.madeDefault, { name: template!.name }));
+      qc.setQueryData<TemplateDto[]>(qk.templates(), (l) => l?.map((x) => ({ ...x, isDefault: x.id === template!.id })));
+    },
+    onError: (e) => toast.error(e.message),
   });
 
   const remove = useMutation({
@@ -341,7 +362,16 @@ function TemplateEditor({ template, onDone }: { template: TemplateDto | null; on
               {t.common.cancel}
             </Button>
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {template?.isDefault ? (
+              <DefaultPill />
+            ) : (
+              template && (
+                <Button type="button" variant="outline" size="lg" onClick={() => makeDefault.mutate()} disabled={makeDefault.isPending}>
+                  {s.makeDefault}
+                </Button>
+              )
+            )}
             {template && dirty && <span className="text-xs text-muted-foreground">{s.unsaved}</span>}
             <Button type="submit" size="lg" variant={dirty ? "default" : "outline"} disabled={!dirty || save.isPending}>
               {save.isPending ? t.common.saving : s.save}
@@ -351,4 +381,9 @@ function TemplateEditor({ template, onDone }: { template: TemplateDto | null; on
       </form>
     </SettingsSection>
   );
+}
+
+/** Marks the checklist every new project starts with. */
+function DefaultPill() {
+  return <span className="inline-flex h-6 w-fit items-center rounded-full bg-pill-hue px-2.5 text-xs font-medium text-pill-hue-ink">{s.isDefault}</span>;
 }

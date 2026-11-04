@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, type Tx } from "@/db";
 import { favorites, projects, projectTemplates, tasks, templateTasks } from "@/db/schema";
 import { logActivity } from "./activity";
+import { defaultTemplateId } from "./templates";
 import type { Ctx } from "./context";
 import { AppError, conflict, notFound } from "./errors";
 import { assertMembers } from "./members";
@@ -152,11 +153,13 @@ export async function createProject(
       .returning();
 
     let seed = raw.tasks ?? [];
-    if (raw.templateId && !raw.tasks) {
+    // No checklist given and no template chosen: start from the workspace default (Settings → Templates).
+    const templateId = raw.tasks ? null : (raw.templateId ?? (await defaultTemplateId(ctx, tx)));
+    if (templateId) {
       const [tpl] = await tx
         .select({ id: projectTemplates.id })
         .from(projectTemplates)
-        .where(and(eq(projectTemplates.id, raw.templateId), eq(projectTemplates.workspaceId, ctx.workspaceId), isNull(projectTemplates.archivedAt)));
+        .where(and(eq(projectTemplates.id, templateId), eq(projectTemplates.workspaceId, ctx.workspaceId), isNull(projectTemplates.archivedAt)));
       if (!tpl) throw notFound("Template");
       // Copied, not linked: later template edits never touch this project.
       seed = await tx
@@ -170,7 +173,7 @@ export async function createProject(
         seed.map((t, i) => ({ workspaceId: ctx.workspaceId, projectId: p.id, title: t.title, note: t.note ?? "", position: i })),
       );
     }
-    await logActivity(ctx, { projectId: p.id, entityType: "project", entityId: p.id, action: "created", data: { fromTemplate: !!raw.templateId } }, tx);
+    await logActivity(ctx, { projectId: p.id, entityType: "project", entityId: p.id, action: "created", data: { fromTemplate: !raw.tasks } }, tx);
     return p;
   });
 }
@@ -227,6 +230,20 @@ export async function setArchived(ctx: Ctx, id: string, archived: boolean) {
   return p;
 }
 
+/**
+ * Permanent delete, allowed only for an archived project (archive first, so deleting is always two
+ * deliberate steps). Its tasks and activity go with it; its documents stay on the shelf, unlinked.
+ */
+export async function deleteArchivedProject(ctx: Ctx, id: string) {
+  const p = await loadProject(ctx, id);
+  if (!p.archivedAt) throw new AppError("invalid", "Only archived projects can be deleted. Archive it first.");
+  await db.transaction(async (tx) => {
+    await tx.delete(favorites).where(and(eq(favorites.workspaceId, ctx.workspaceId), eq(favorites.entityId, id)));
+    await tx.delete(projects).where(and(eq(projects.id, id), eq(projects.workspaceId, ctx.workspaceId), isNotNull(projects.archivedAt)));
+    await logActivity(ctx, { entityType: "project", entityId: null, action: "deleted", data: { name: p.name } }, tx);
+  });
+}
+
 /** Copies the structure; every task starts open. Notes and dates only when asked. */
 export async function duplicateProject(ctx: Ctx, id: string, opts: { name?: string; includeNotes: boolean; includeDates: boolean }) {
   const src = await getProject(ctx, id);
@@ -238,6 +255,7 @@ export async function duplicateProject(ctx: Ctx, id: string, opts: { name?: stri
     status: "active",
     dueDate: opts.includeDates ? src.project.dueDate : null,
     notes: opts.includeNotes ? src.project.notes : "",
+    tasks: [], // the copies below are the checklist; never add the default template on top
   }).then(async (p) => {
     if (src.tasks.length) {
       await db.insert(tasks).values(

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Tx } from "@/db";
 import { projectTemplates, templateTasks } from "@/db/schema";
@@ -8,7 +8,7 @@ import type { Ctx } from "./context";
 import { AppError, conflict, notFound } from "./errors";
 
 export type TemplateTaskDto = { id: string; title: string; note: string };
-export type TemplateDto = { id: string; name: string; description: string | null; version: number; tasks: TemplateTaskDto[] };
+export type TemplateDto = { id: string; name: string; description: string | null; version: number; isDefault: boolean; tasks: TemplateTaskDto[] };
 
 const DEFAULT_TEMPLATES = [
   {
@@ -41,7 +41,7 @@ export async function listTemplates(ctx: Ctx, tx: Tx | typeof db = db): Promise<
     .select()
     .from(projectTemplates)
     .where(and(eq(projectTemplates.workspaceId, ctx.workspaceId), isNull(projectTemplates.archivedAt)))
-    .orderBy(asc(projectTemplates.name));
+    .orderBy(desc(projectTemplates.isDefault), asc(projectTemplates.name));
   if (!tpls.length) return [];
   const rows = await tx
     .select()
@@ -53,6 +53,7 @@ export async function listTemplates(ctx: Ctx, tx: Tx | typeof db = db): Promise<
     name: t.name,
     description: t.description,
     version: t.version,
+    isDefault: t.isDefault,
     tasks: rows.filter((r) => r.templateId === t.id).map((r) => ({ id: r.id, title: r.title, note: r.note })),
   }));
 }
@@ -77,13 +78,33 @@ export async function ensureDefaultTemplates(ctx: Ctx) {
     for (const d of DEFAULT_TEMPLATES) {
       const [tpl] = await tx
         .insert(projectTemplates)
-        .values({ workspaceId: ctx.workspaceId, name: d.name, description: d.description })
+        .values({ workspaceId: ctx.workspaceId, name: d.name, description: d.description, isDefault: true })
         .onConflictDoNothing()
         .returning();
       if (!tpl) continue; // a concurrent request seeded it
       await tx.insert(templateTasks).values(d.tasks.map((title, i) => ({ templateId: tpl.id, title, position: i })));
     }
   });
+}
+
+/** Makes one template the checklist every new project starts with (one default per workspace). */
+export async function setDefaultTemplate(ctx: Ctx, id: string) {
+  requireAdmin(ctx);
+  await db.transaction(async (tx) => {
+    await getTemplate(ctx, id, tx);
+    await tx.update(projectTemplates).set({ isDefault: false }).where(and(eq(projectTemplates.workspaceId, ctx.workspaceId), eq(projectTemplates.isDefault, true)));
+    await tx.update(projectTemplates).set({ isDefault: true, updatedAt: new Date() }).where(and(eq(projectTemplates.id, id), eq(projectTemplates.workspaceId, ctx.workspaceId)));
+    await logActivity(ctx, { entityType: "template", entityId: id, action: "made_default" }, tx);
+  });
+}
+
+/** The default template's steps, for new projects created without an explicit checklist. */
+export async function defaultTemplateId(ctx: Ctx, tx: Tx | typeof db = db) {
+  const [d] = await tx
+    .select({ id: projectTemplates.id })
+    .from(projectTemplates)
+    .where(and(eq(projectTemplates.workspaceId, ctx.workspaceId), eq(projectTemplates.isDefault, true), isNull(projectTemplates.archivedAt)));
+  return d?.id ?? null;
 }
 
 /** Archived templates keep their row; free the name so a new template can use it. */
@@ -149,7 +170,7 @@ export async function deleteTemplate(ctx: Ctx, id: string) {
   requireAdmin(ctx);
   const [tpl] = await db
     .update(projectTemplates)
-    .set({ archivedAt: new Date(), updatedAt: new Date() })
+    .set({ archivedAt: new Date(), isDefault: false, updatedAt: new Date() })
     .where(and(eq(projectTemplates.id, id), eq(projectTemplates.workspaceId, ctx.workspaceId), isNull(projectTemplates.archivedAt)))
     .returning();
   if (!tpl) throw notFound("Template");

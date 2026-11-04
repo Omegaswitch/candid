@@ -21,6 +21,9 @@ export const settings = {
     timezoneHelp: "Taken from your browser. Times such as “edited 5 minutes ago” use it; deadlines are calendar days and never shift.",
     timezone: "Your time zone",
     localTime: "Local time now",
+    privacyTitle: "Privacy",
+    privacyHelp: "What Candid stores about you, where it is processed and what you can ask for.",
+    privacyLink: "Read the privacy notice",
   },
 
   roles: { admin: "Admin", member: "Member" },
@@ -57,6 +60,9 @@ export const settings = {
   },
 
   templates: {
+    isDefault: "Default for new projects",
+    makeDefault: "Use for new projects",
+    madeDefault: "New projects will start with “{name}”.",
     title: "Templates",
     help: "Each new project can start from a template. Its tasks are copied into the project, so editing a template later never changes existing projects.",
     listTitle: "Project templates",

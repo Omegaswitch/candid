@@ -74,6 +74,14 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
     setTemplate(id);
     setSteps(list.find((x) => x.id === id)?.tasks.map((x) => x.title) ?? []);
   };
+  // Every new project starts from the default checklist chosen in Settings → Templates.
+  const [prefilled, setPrefilled] = useState(false);
+  const defaultTpl = list.find((x) => x.isDefault) ?? list[0];
+  if (!prefilled && defaultTpl) {
+    setPrefilled(true);
+    setTemplate(defaultTpl.id);
+    setSteps(defaultTpl.tasks.map((x) => x.title));
+  }
   const addStep = () => {
     const v = newStep.trim();
     if (!v) return;

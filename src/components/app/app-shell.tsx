@@ -65,12 +65,12 @@ function NavLink({ item, collapsed, onNavigate }: { item: NavItem; collapsed: bo
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
+        "flex h-9 items-center gap-3 rounded-md px-3 text-[15px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground",
         active && "bg-sidebar-accent text-foreground",
         collapsed && "justify-center px-0",
       )}
     >
-      <item.icon className="size-4 shrink-0" strokeWidth={1.6} aria-hidden />
+      <item.icon className="size-[18px] shrink-0" strokeWidth={1.6} aria-hidden />
       {collapsed ? <span className="sr-only">{item.label}</span> : <span className="truncate">{item.label}</span>}
       {!collapsed && !!n && (
         <span className={cn("num ml-auto text-xs", item.count === "overdue" ? "font-medium text-negative" : "text-muted-foreground")}>{n}</span>
@@ -135,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside
         className={cn(
           "sticky top-0 hidden h-screen shrink-0 border-r border-sidebar-border bg-sidebar transition-[width] duration-150 lg:block",
-          collapsed ? "w-14" : "w-64",
+          collapsed ? "w-16" : "w-72",
         )}
       >
         <SidebarBody collapsed={collapsed} />

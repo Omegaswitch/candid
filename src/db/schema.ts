@@ -156,13 +156,18 @@ export const projectTemplates = pgTable(
     workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
+    // The checklist every new project starts with (one per workspace, chosen in Settings).
+    isDefault: boolean("is_default").notNull().default(false),
     version: integer("version").notNull().default(1),
     archivedAt: ts("archived_at"),
     createdBy: uuid("created_by").references(() => memberships.id, { onDelete: "set null" }),
     createdAt: created(),
     updatedAt: updated(),
   },
-  (t) => [uniqueIndex("templates_ws_name_uq").on(t.workspaceId, t.name)],
+  (t) => [
+    uniqueIndex("templates_ws_name_uq").on(t.workspaceId, t.name),
+    uniqueIndex("templates_ws_default_uq").on(t.workspaceId).where(sql`${t.isDefault} and ${t.archivedAt} is null`),
+  ],
 );
 
 export const templateTasks = pgTable(
