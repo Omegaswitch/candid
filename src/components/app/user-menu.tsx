@@ -1,10 +1,10 @@
 "use client";
 
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { t } from "@/i18n";
+import { fmt, t } from "@/i18n";
 import { initials } from "@/lib/people";
 import { useSession } from "./session";
 
@@ -22,7 +22,8 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`${t.nav.userMenu}: ${s.name}`}>
+        {/* The visible initials are part of the accessible name (WCAG 2.5.3 label in name). */}
+        <Button variant="ghost" size="icon" aria-label={fmt(t.nav.userMenuLabel, { initials: initials(s.name), name: s.name })}>
           <span className="flex size-6 items-center justify-center rounded-full bg-raised text-[11px] font-medium">{initials(s.name)}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -34,6 +35,9 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/settings"><Settings className="size-4" />{t.nav.settings}</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/privacy"><ShieldCheck className="size-4" />{t.nav.privacy}</Link>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={signOut}>
           <LogOut className="size-4" />

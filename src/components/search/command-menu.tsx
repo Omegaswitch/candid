@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CommandDialog, Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { fmt } from "@/i18n";
 import { search as s } from "@/i18n/en/search";
@@ -141,7 +142,16 @@ export function CommandMenu() {
         <Command shouldFilter={false} loop>
           <CommandInput value={q} onValueChange={setQ} placeholder={s.inputPlaceholder} maxLength={100} />
           <CommandList className="max-h-[min(24rem,60vh)]">
-            {pending && !data && <Status>{s.searching}</Status>}
+            {pending && !data && (
+              <div className="p-1" role="status" aria-label={s.searching}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex h-8 items-center gap-2 px-2">
+                    <Skeleton className="size-4" />
+                    <Skeleton className={`h-3.5 ${i ? "w-1/3" : "w-1/2"}`} />
+                  </div>
+                ))}
+              </div>
+            )}
             {term && results.isError && !pending && (
               <div role="alert" className="flex items-center justify-between gap-3 px-3 py-3 text-sm">
                 <span className="text-muted-foreground">{s.failed}</span>

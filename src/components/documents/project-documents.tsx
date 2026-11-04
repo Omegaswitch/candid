@@ -41,9 +41,12 @@ export function ProjectDocuments({ projectId }: { projectId: string }) {
         {s.title}
       </h3>
       {docs.isPending ? (
-        <div className="flex flex-col gap-2 py-1" aria-busy>
+        <div className="-mx-2 flex flex-col" aria-busy aria-label={t.common.loading}>
           {[0, 1].map((i) => (
-            <Skeleton key={i} className="h-5 w-3/4 animate-none" />
+            <div key={i} className="flex h-8 items-center gap-2.5 px-2">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-3.5 w-1/2" />
+            </div>
           ))}
         </div>
       ) : docs.isError ? (

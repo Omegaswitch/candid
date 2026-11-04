@@ -1,0 +1,36 @@
+import type { Localized } from "./types";
+
+export const search: Localized<typeof import("../en/search").search> = {
+  label: "Hledat",
+  placeholder: "Hledat nebo přejít na…",
+  inputPlaceholder: "Hledat projekty, úkoly, dokumenty…",
+  dialogTitle: "Hledání a\u00a0příkazy",
+  dialogDescription: "Hledejte projekty, úkoly a\u00a0dokumenty, nebo spusťte příkaz.",
+  shortcutMac: "⌘K",
+  shortcutOther: "Ctrl K",
+  searching: "Hledání…",
+  noMatches: "Pro „{q}“ nic nenalezeno",
+  failed: "Hledání se nezdařilo.",
+  retry: "Zkusit znovu",
+  archived: "Archivováno",
+  done: "Hotovo",
+  groups: { projects: "Projekty", tasks: "Úkoly", documents: "Dokumenty", navigation: "Navigace", actions: "Akce" },
+  nav: {
+    allProjects: "Všechny projekty",
+    myTasks: "Moje úkoly",
+    dueSoon: "Brzy splatné",
+    overdue: "Po termínu",
+    waiting: "Čeká se",
+    archive: "Archiv",
+    documents: "Dokumenty",
+    settings: "Nastavení",
+  },
+  actions: {
+    addProject: "Přidat projekt",
+    importProjects: "Importovat projekty",
+    export: "Exportovat",
+    themeLight: "Vzhled: světlý",
+    themeDark: "Vzhled: tmavý",
+    themeSystem: "Vzhled: podle systému",
+  },
+};

@@ -18,5 +18,7 @@ export const nav = {
   collapseSidebar: "Collapse sidebar",
   expandSidebar: "Expand sidebar",
   userMenu: "Account",
+  userMenuLabel: "{initials}: account menu for {name}",
+  privacy: "Privacy notice",
   skipToContent: "Skip to content",
 };

@@ -24,7 +24,7 @@ export function DocumentShelf() {
 
   return (
     <section
-      aria-labelledby="doc-shelf-label"
+      aria-label={s.shelfRegion}
       className={cn("-mx-1 flex flex-col gap-0.5 rounded-md px-1 py-1 outline-1 outline-transparent transition-colors", dragging && "bg-sidebar-accent outline-dashed outline-border")}
       onDragOver={(e) => {
         if (!dragHasFiles(e)) return;
@@ -41,7 +41,7 @@ export function DocumentShelf() {
       }}
     >
       <div className="flex h-6 items-center justify-between pl-2.5">
-        <h2 id="doc-shelf-label" className="text-xs text-muted-foreground">
+        <h2 className="text-xs text-muted-foreground">
           {dragging ? s.dropToUpload : s.shelfLabel}
         </h2>
         <AddDocumentMenu align="end">
@@ -49,9 +49,12 @@ export function DocumentShelf() {
         </AddDocumentMenu>
       </div>
       {docs.isPending ? (
-        <div className="flex flex-col gap-2 px-2.5 py-1.5" aria-busy>
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-4 w-4/5 animate-none" />
+        <div className="flex flex-col gap-0.5" aria-busy aria-label={t.common.loading}>
+          {[0, 1].map((i) => (
+            <div key={i} className="flex h-8 items-center gap-2.5 px-2.5">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-3.5 w-3/5" />
+            </div>
           ))}
         </div>
       ) : docs.isError ? (

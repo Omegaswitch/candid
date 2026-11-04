@@ -114,12 +114,34 @@ export function ReviewStep(props: {
   }
   if (!plan) {
     return (
-      <div className="grid gap-3" aria-busy>
+      <div className="grid gap-4" aria-busy>
         <span className="sr-only">{s.review.loading}</span>
-        <Skeleton className="h-5 w-72" />
-        {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="h-14 w-full" />
-        ))}
+        <div className="flex h-5 items-center"><Skeleton className="h-3.5 w-72" /></div>
+        <div className="flex gap-1.5">
+          {(["all", "changes", "issues"] as const).map((f) => (
+            <span key={f} className="flex h-7 items-center rounded-full border px-3 text-xs text-muted-foreground">{s.review.filters[f]}</span>
+          ))}
+        </div>
+        <div className="grid gap-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="overflow-hidden rounded-lg border bg-card">
+              <div className="flex items-start gap-2 border-b bg-muted/40 px-3 py-2">
+                <div className="flex flex-1 flex-col gap-1">
+                  <div className="flex h-5 items-center"><Skeleton className="h-3.5 w-1/3" /></div>
+                  <div className="flex h-4 items-center"><Skeleton className="h-3 w-1/4" /></div>
+                </div>
+                <Skeleton className="h-5 w-14 rounded-full" />
+              </div>
+              {[0, 1].map((j) => (
+                <div key={j} className="flex h-10 items-center gap-2 border-t px-3 first:border-t-0">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className={`h-3.5 ${j ? "w-1/2" : "w-2/3"}`} />
+                  <Skeleton className="ml-auto h-5 w-14 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

@@ -35,7 +35,7 @@ export default function Image() {
           </svg>
           <div style={{ display: "flex", fontSize: 128, lineHeight: 1, letterSpacing: -4 }}>{t.common.appName}</div>
         </div>
-        <div style={{ display: "flex", marginTop: 56, fontSize: 40, lineHeight: 1.25, color: MUTED }}>{t.common.tagline}</div>
+        <div style={{ display: "flex", marginTop: 56, fontSize: 36, lineHeight: 1.25, color: MUTED }}>{t.common.tagline}</div>
       </div>
     ),
     size,

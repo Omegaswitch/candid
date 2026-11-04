@@ -123,12 +123,27 @@ export function DocumentsPage() {
 
       <div className="overflow-hidden rounded-lg border bg-card">
         {docs.isPending ? (
-          <div className="flex flex-col divide-y" aria-busy>
+          <div className="flex flex-col divide-y" aria-busy aria-label={t.common.loading}>
+            <div className="flex h-10 items-center gap-4 pl-10 pr-2 text-sm text-muted-foreground">
+              <span className="flex-1">{s.columns.name}</span>
+              <span className="hidden w-20 sm:block">{s.columns.type}</span>
+              <span className="hidden w-16 text-right md:block">{s.columns.size}</span>
+              <span className="hidden w-40 md:block">{s.columns.project}</span>
+              <span className="hidden w-28 lg:block">{s.columns.updated}</span>
+              <span className="w-24" />
+            </div>
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex h-12 items-center gap-4 px-4">
-                <Skeleton className="h-4 w-1/3 animate-none" />
-                <Skeleton className="ml-auto h-4 w-16 animate-none" />
-                <Skeleton className="hidden h-4 w-24 animate-none md:block" />
+              <div key={i} className="flex h-12 items-center gap-4 pl-2 pr-2">
+                <span className="w-8" />
+                <div className="flex flex-1 items-center gap-2.5">
+                  <Skeleton className="size-4" />
+                  <Skeleton className="h-3.5 w-1/3" />
+                </div>
+                <Skeleton className="hidden h-3.5 w-12 sm:block" />
+                <Skeleton className="hidden h-3.5 w-10 md:block" />
+                <Skeleton className="hidden h-3.5 w-24 md:block" />
+                <Skeleton className="hidden h-3.5 w-16 lg:block" />
+                <span className="w-24" />
               </div>
             ))}
           </div>
@@ -237,7 +252,7 @@ function DocumentRow({
           {...attributes}
           {...listeners}
           aria-label={fmt(s.actions.drag, { name: doc.name })}
-          className="flex size-7 cursor-grab items-center justify-center rounded-md text-muted-foreground opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring active:cursor-grabbing"
+          className="flex size-7 cursor-grab items-center justify-center rounded-md text-muted-foreground opacity-80 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring active:cursor-grabbing"
         >
           <GripVertical className="size-4" aria-hidden />
         </button>

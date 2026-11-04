@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useProjects } from "@/hooks/queries";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,11 @@ export function PinnedProjects({ onNavigate }: { onNavigate?: () => void }) {
       <h2 id="pinned-projects-label" className="mb-1 px-2.5 text-xs font-normal text-muted-foreground">
         {t.nav.pinned}
       </h2>
-      {projects.isPending ? null : pinned.length === 0 ? (
+      {projects.isPending ? (
+        <div className="flex h-8 items-center px-2.5" aria-busy aria-label={t.common.loading}>
+          <Skeleton className="h-3.5 w-3/5" />
+        </div>
+      ) : pinned.length === 0 ? (
         <p className="px-2.5 text-xs text-muted-foreground">{t.nav.noPinned}</p>
       ) : (
         pinned.map((p) => {

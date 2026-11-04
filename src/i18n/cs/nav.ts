@@ -1,0 +1,26 @@
+import type { Localized } from "./types";
+
+export const nav: Localized<typeof import("../en/nav").nav> = {
+  allProjects: "Všechny projekty",
+  myTasks: "Moje úkoly",
+  dueSoon: "Brzy splatné",
+  overdue: "Po termínu",
+  waiting: "Čeká se",
+  archive: "Archiv",
+  pinned: "Připnuté projekty",
+  noPinned: "Připněte si projekt a\u00a0bude tady.",
+  documents: "Dokumenty",
+  viewAll: "Zobrazit vše",
+  settings: "Nastavení",
+  search: "Hledat",
+  searchHint: "Hledat nebo přejít na…",
+  addProject: "Přidat projekt",
+  importExport: "Import / export",
+  openMenu: "Otevřít nabídku",
+  collapseSidebar: "Sbalit postranní panel",
+  expandSidebar: "Rozbalit postranní panel",
+  userMenu: "Účet",
+  userMenuLabel: "{initials}: nabídka účtu pro {name}",
+  privacy: "Ochrana osobních údajů",
+  skipToContent: "Přeskočit na obsah",
+};

@@ -42,10 +42,15 @@ export function IntegrationsSettings({ connected, callbackError }: { connected: 
       <PageTitle>{s.title}</PageTitle>
       <SettingsSection title={s.googleTitle} description={s.googleHelp} aside={<><p className="font-medium text-foreground">{s.accessTitle}</p><p className="mt-1">{s.accessBody}</p></>}>
         {status.isPending ? (
-          <div aria-hidden className="flex flex-col gap-3">
-            <Skeleton className="h-5 w-56" />
-            <Skeleton className="h-5 w-72" />
-            <Skeleton className="h-9 w-36" />
+          <div className="flex flex-col gap-4" aria-busy aria-label={t.common.loading}>
+            <dl>
+              <Field label={g.status}><Skeleton className="inline-block h-5 w-24 rounded-full align-middle" /></Field>
+              <Field label={g.account}><div className="flex h-5 items-center"><Skeleton className="h-3.5 w-48" /></div></Field>
+              <Field label={g.lastError}><div className="flex h-5 items-center"><Skeleton className="h-3.5 w-6" /></div></Field>
+            </dl>
+            <div className="flex justify-end border-t pt-4">
+              <Skeleton className="h-9 w-32" />
+            </div>
           </div>
         ) : status.isError ? (
           <GoogleErrorNote error={new Error(g.loadError)} onRetry={() => status.refetch()} />

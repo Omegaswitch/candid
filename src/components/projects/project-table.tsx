@@ -41,12 +41,14 @@ export function ProjectTable({
             <th className="hidden font-normal xl:table-cell">{t.projects.table.next}</th>
             <th className="w-[14%] xl:w-[12%] font-normal">{t.projects.table.owner}</th>
             <th className="w-[13%] xl:w-[11%] pr-2 text-right font-normal">{t.projects.table.due}</th>
-            <th className="w-11" aria-label={t.projects.menu.open} />
+            <th className="w-11">
+              <span className="sr-only">{t.projects.table.actions}</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {projects.map((p, i) => (
-            <tr key={p.id} className="relative flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2.5 last:border-0 hover:bg-accent/40 sm:table-row sm:h-12 sm:p-0">
+            <tr key={p.id} className="relative flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2.5 last:border-0 hover:bg-accent/40 has-[a:focus-visible]:bg-accent/40 sm:table-row sm:h-12 sm:p-0">
               <td className="relative z-10 sm:pl-4">
                 <Checkbox
                   checked={selected.has(p.id)}

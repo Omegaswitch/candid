@@ -62,11 +62,11 @@ export function History({ projectId }: { projectId: string }) {
       {open && (
         <div id={id} className="mt-2">
           {q.isPending ? (
-            <ul className="grid gap-3" aria-busy>
+            <ul className="grid gap-2.5" aria-busy aria-label={t.common.loading}>
               {[0, 1, 2].map((i) => (
-                <li key={i} className="grid gap-1.5">
-                  <Skeleton className="h-3.5 w-3/4 animate-none" />
-                  <Skeleton className="h-3 w-20 animate-none" />
+                <li key={i} className="grid gap-0.5">
+                  <div className="flex h-5 items-center"><Skeleton className="h-3.5 w-3/4" /></div>
+                  <div className="flex h-4 items-center"><Skeleton className="h-3 w-20" /></div>
                 </li>
               ))}
             </ul>

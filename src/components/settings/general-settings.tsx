@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { useSession } from "@/components/app/session";
@@ -47,6 +48,11 @@ export function GeneralSettings() {
             <span className="num">{local?.now ?? t.common.none}</span>
           </Field>
         </dl>
+      </SettingsSection>
+      <SettingsSection title={g.privacyTitle} description={g.privacyHelp}>
+        <Link href="/privacy" className="font-medium underline-offset-4 hover:underline">
+          {g.privacyLink}
+        </Link>
       </SettingsSection>
     </>
   );

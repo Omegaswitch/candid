@@ -132,7 +132,7 @@ export function PanelHeader({ data, actions }: { data: ProjectDetail; actions: A
   const overdue = pr.status !== "completed" && dueState(pr.dueDate) === "overdue";
 
   return (
-    <header className="grid gap-4">
+    <div className="grid gap-4">
       <div className="flex items-start gap-2 pr-10">
         <div className="grid min-w-0 flex-1 gap-1">
           <h2 className="text-lg leading-snug font-semibold break-words">
@@ -149,7 +149,7 @@ export function PanelHeader({ data, actions }: { data: ProjectDetail; actions: A
               editLabel={`${p.client}: ${pr.client ?? t.common.none}`}
               placeholder={p.clientPlaceholder}
             >
-              {pr.client || <span className="text-muted-foreground/80">{p.clientPlaceholder}</span>}
+              {pr.client || <span className="text-muted-foreground">{p.clientPlaceholder}</span>}
             </InlineText>
             {pr.archivedAt && <span className="flex-none rounded-full bg-pill-neutral px-2 py-0.5 text-xs font-medium text-pill-neutral-ink">{p.archived}</span>}
           </div>
@@ -214,6 +214,6 @@ export function PanelHeader({ data, actions }: { data: ProjectDetail; actions: A
       <p className="text-xs text-muted-foreground">
         {fmt(p.timestamps, { created: formatInstant(pr.createdAt), updated: formatInstant(pr.updatedAt) })}
       </p>
-    </header>
+    </div>
   );
 }

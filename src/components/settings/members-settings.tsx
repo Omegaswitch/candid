@@ -50,11 +50,15 @@ export function MembersSettings() {
         }
       >
         {members.isPending ? (
-          <ul aria-hidden className="flex flex-col">
+          <ul aria-busy aria-label={t.common.loading} className="flex flex-col">
             {[0, 1, 2].map((i) => (
-              <li key={i} className="flex h-14 items-center gap-4 border-t first:border-t-0">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="ml-auto h-4 w-24" />
+              <li key={i} className="flex items-center gap-4 border-t py-3 first:border-t-0 first:pt-0 last:pb-0">
+                <div className="flex flex-1 flex-col gap-1">
+                  <div className="flex h-5 items-center"><Skeleton className="h-3.5 w-40" /></div>
+                  <div className="flex h-4 items-center"><Skeleton className="h-3 w-48" /></div>
+                </div>
+                <Skeleton className="h-3.5 w-10" />
+                <Skeleton className="h-9 w-28" />
               </li>
             ))}
           </ul>

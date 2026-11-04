@@ -2,6 +2,7 @@
 export const documents = {
   title: "Documents",
   shelfLabel: "Documents",
+  shelfRegion: "Document shelf",
   viewAll: "View all",
   add: "Add document",
   addTo: "Add a document",
