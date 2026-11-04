@@ -89,7 +89,10 @@ export function LinkDialog({ open, onOpenChange, projectId }: { open: boolean; o
               autoFocus
               placeholder={s.link.urlPlaceholder}
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                setError(null);
+              }}
               aria-invalid={!!error}
               aria-describedby={error ? "doc-link-error" : undefined}
             />

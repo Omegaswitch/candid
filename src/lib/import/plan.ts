@@ -252,13 +252,15 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
     d.taskNote = text("taskNote", LIMITS.taskNote);
 
     if (!d.failed && !d.projectId && !d.name && !(d.taskId && tasksById.get(d.taskId))) fail("missingProject", "project");
-    if (!d.failed) rows.push(d);
+    // Failed rows stay in their project for the preview (shown as skipped) when the project is known.
+    if (!d.failed || d.projectId || d.name || d.taskId) rows.push(d);
   });
 
   // 2. Group rows into projects: by Project ID, else by the task's project, else by name + client.
   const groups = new Map<string, Group>();
   for (const d of rows) {
-    const pid = d.projectId ?? (d.taskId ? tasksById.get(d.taskId)!.projectId : undefined);
+    const pid = d.projectId ?? (d.taskId ? tasksById.get(d.taskId)?.projectId : undefined);
+    if (d.failed && !pid && !d.name) continue;
     const k = pid ? `id:${pid}` : `name:${key(d.name)}|${key(d.client)}`;
     let g = groups.get(k);
     if (!g) groups.set(k, (g = { key: k, existing: pid ? projectsById.get(pid) : undefined, rows: [] }));
@@ -272,6 +274,7 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
   }
 
   const planned: PlannedProject[] = [];
+  const pending: (() => void)[] = [];
   const apply: ApplyProject[] = [];
   const counts = { projectsCreate: 0, projectsUpdate: 0, tasksCreate: 0, tasksUpdate: 0, unchanged: 0 };
   const show = (f: ImportField, v: unknown): string | null => {
@@ -281,7 +284,19 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
     return String(v);
   };
 
-  for (const g of groups.values()) {
+  for (const all of groups.values()) {
+    const failed = all.rows.filter((d) => d.failed);
+    const g: Group = { ...all, rows: all.rows.filter((d) => !d.failed) };
+    const failedTasks = (pp: PlannedProject) => {
+      for (const d of failed) if (d.title) pp.tasks.push({ row: d.row, action: "skip", title: d.title, diffs: [] });
+      pp.tasks.sort((a, b) => a.row - b.row);
+    };
+    if (!g.rows.length) {
+      const pp: PlannedProject = { key: g.key, firstRow: failed[0].row, action: "skip", id: g.existing?.id, name: failed[0].name ?? g.existing?.name ?? "", client: failed[0].client ?? null, diffs: [], tasks: [] };
+      failedTasks(pp);
+      planned.push(pp);
+      continue;
+    }
     const first = g.rows[0].row;
     const skipGroup = (code: IssueCode, severity: IssueSeverity, value?: string) => {
       issue(first, severity, code, true, "project", value);
@@ -312,6 +327,7 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
     const client = target.client === undefined ? (g.existing?.client ?? null) : target.client;
     const pp: PlannedProject = { key: g.key, firstRow: first, action: "skip", id: g.existing?.id, name: name ?? "", client, diffs: [], tasks: [] };
     planned.push(pp);
+    pending.push(() => failedTasks(pp));
 
     const existing = update ? g.existing : undefined;
     if (!existing) {
@@ -344,7 +360,7 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
       ap.action = "create";
       ap.values = values;
       pp.action = "create";
-      pp.diffs = diffList(projectFieldOf, values, {}, show);
+      pp.diffs = diffList(projectFieldOf, values, {}, show).filter((x) => x.field !== "project" && x.field !== "client");
       counts.projectsCreate++;
     } else {
       const values: Partial<ProjectValues> = {};
@@ -424,12 +440,13 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
       if (d.taskNote) values.note = d.taskNote;
       ap.tasks.push({ action: "create", row: d.row, values });
       pt.action = "create";
-      pt.diffs = diffList(taskFieldOf, values, {}, show).filter((x) => x.field !== "task");
+      pt.diffs = diffList(taskFieldOf, values, {}, show).filter((x) => x.field !== "task" && !(x.field === "completed" && x.to === "no"));
       counts.tasksCreate++;
     }
     apply.push(ap);
   }
 
+  for (const f of pending) f();
   for (const i of issues) if (i.severity !== "error" && i.skipped) skippedRows.add(i.row);
   for (const r of failedRows) skippedRows.delete(r);
   const warnings = issues.filter((i) => i.severity === "warning" && !i.skipped).length;

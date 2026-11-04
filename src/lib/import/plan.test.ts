@@ -69,6 +69,9 @@ describe("buildPlan: grouping", () => {
       [6, "missingProject"],
     ]);
     expect(p.counts.errors).toBe(5);
+    // Failed rows still show in their project, as skipped; the project is not created from them.
+    expect(p.projects).toHaveLength(1);
+    expect(p.projects[0]).toMatchObject({ action: "skip", tasks: [{ row: 2, action: "skip" }, { row: 3 }, { row: 4 }, { row: 5 }] });
   });
 
   it("asks for an order on ambiguous dates, then uses it", () => {
