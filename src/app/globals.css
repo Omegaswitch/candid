@@ -1,0 +1,194 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-rule: var(--rule);
+  --color-hue: var(--hue);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-pill-positive: var(--pill-positive-bg);
+  --color-pill-positive-ink: var(--pill-positive-ink);
+  --color-pill-negative: var(--pill-negative-bg);
+  --color-pill-negative-ink: var(--pill-negative-ink);
+  --color-pill-warning: var(--pill-warning-bg);
+  --color-pill-warning-ink: var(--pill-warning-ink);
+  --color-pill-neutral: var(--pill-neutral-bg);
+  --color-pill-neutral-ink: var(--pill-neutral-ink);
+  --color-pill-hue: var(--pill-hue-bg);
+  --color-pill-hue-ink: var(--pill-hue-ink);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Achromatic ledger (Taste v2 app sheet, seed 177156846). Chrome is ink and grey; colour is reserved
+   for status: --hue (progress / the main data element), --positive (done), --warning (waiting),
+   --negative (overdue). Every colour is a semantic token; components never use raw hex. */
+:root {
+  --ground: #f2f4f7; /* the face: a blue-grey ledger ground instead of #f8f8f8 */
+  --surface: #ffffff;
+  --raised: #eeeeee;
+  --rule: #f0f0f0;
+  --hue: #1d5fbf;
+  --positive: #2e7d32;
+  --negative: #c4242a;
+  --warning: #92400e;
+  --pill-positive-bg: #dcfae5; --pill-positive-ink: #04250e;
+  --pill-negative-bg: #ffedea; --pill-negative-ink: #831c1e;
+  --pill-warning-bg: #fffbeb; --pill-warning-ink: #92400e;
+  --pill-neutral-bg: #eeeeee; --pill-neutral-ink: #3d3d3d;
+  --pill-hue-bg: #e8effa; --pill-hue-ink: #123d7a;
+
+  --background: var(--ground);
+  --foreground: #0a0a0a;
+  --card: var(--surface);
+  --card-foreground: #0a0a0a;
+  --popover: var(--surface);
+  --popover-foreground: #0a0a0a;
+  --primary: #141414;
+  --primary-foreground: #ffffff;
+  --secondary: #e5e5e5;
+  --secondary-foreground: #0a0a0a;
+  --muted: #eeeeee;
+  --muted-foreground: #5f6368;
+  --accent: #ebedf0;
+  --accent-foreground: #0a0a0a;
+  --destructive: var(--negative);
+  --border: #e3e5e8;
+  --input: #d4d4d4;
+  --ring: var(--hue);
+  --chart-1: #141414;
+  --chart-2: #8a8a8a;
+  --chart-3: var(--hue);
+  --chart-4: #5f6368;
+  --chart-5: #d4d4d4;
+  --radius: 0.5rem; /* cards 8px, controls 6px */
+  --sidebar: var(--ground);
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #141414;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e4e7eb;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #e3e5e8;
+  --sidebar-ring: var(--hue);
+}
+
+.dark {
+  --ground: #0a0a0a;
+  --surface: #141414;
+  --raised: #222222;
+  --rule: #1c1c1c;
+  --hue: #6ea2ff;
+  --positive: #3fc07a;
+  --negative: #f0707f;
+  --warning: #f0b45b;
+  --pill-positive-bg: #172a1d; --pill-positive-ink: #3fc07a;
+  --pill-negative-bg: #2c1a20; --pill-negative-ink: #f0707f;
+  --pill-warning-bg: #2b2112; --pill-warning-ink: #f0b45b;
+  --pill-neutral-bg: #262626; --pill-neutral-ink: #d4d4d4;
+  --pill-hue-bg: #15233b; --pill-hue-ink: #8fb8ff;
+
+  --background: var(--ground);
+  --foreground: #fafafa;
+  --card: var(--surface);
+  --card-foreground: #fafafa;
+  --popover: #1a1a1a;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #0a0a0a;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --muted: #222222;
+  --muted-foreground: #b4b4b4;
+  --accent: #222222;
+  --accent-foreground: #fafafa;
+  --destructive: var(--negative);
+  --border: #262626;
+  --input: #3a3a3a;
+  --ring: var(--hue);
+  --chart-1: #fafafa;
+  --chart-2: #8a8a8a;
+  --chart-3: var(--hue);
+  --chart-4: #b4b4b4;
+  --chart-5: #3a3a3a;
+  --sidebar: var(--ground);
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #fafafa;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1f1f1f;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #262626;
+  --sidebar-ring: var(--hue);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+@layer base {
+  /* Numbers that update or align use tabular figures. */
+  .num { font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+}
+
+/* Motion is feedback only (fast, small). With reduced motion it is removed, content stays. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
