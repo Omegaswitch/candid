@@ -25,6 +25,7 @@ export const documents = {
     download: "Download",
     rename: "Rename",
     replace: "Replace file",
+    menuFor: "Actions for {name}",
     pin: "Pin to sidebar",
     unpin: "Unpin",
     project: "Project",

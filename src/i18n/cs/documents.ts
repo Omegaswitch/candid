@@ -26,6 +26,7 @@ export const documents: Localized<typeof import("../en/documents").documents> = 
     download: "Stáhnout",
     rename: "Přejmenovat",
     replace: "Nahradit soubor",
+    menuFor: "Akce pro {name}",
     pin: "Připnout do postranního panelu",
     unpin: "Odepnout",
     project: "Projekt",

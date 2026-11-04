@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "./file-types";
-import { AddDocumentMenu, DocIcon, DocLink, DocumentPreview, typeLabel } from "./parts";
+import { AddDocumentMenu, DocIcon, DocLink, DocRowMenu, DocumentPreview, typeLabel } from "./parts";
 import { dragHasFiles, useDocuments, useUpload, type DocumentDto } from "./use-documents";
 
 const s = t.documents;
@@ -61,12 +61,13 @@ export function ProjectDocuments({ projectId }: { projectId: string }) {
       ) : (
         <ul className="-mx-2 flex flex-col">
           {list.map((d) => (
-            <li key={d.id}>
-              <DocLink doc={d} onPreview={setPreview} className="flex h-8 items-center gap-2.5 rounded-md px-2 text-sm transition-colors hover:bg-muted">
+            <li key={d.id} className="group flex items-center rounded-md hover:bg-muted">
+              <DocLink doc={d} onPreview={setPreview} className="flex h-8 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 text-sm">
                 <DocIcon doc={d} />
                 <span className="min-w-0 flex-1 truncate">{d.name}</span>
                 <span className="num shrink-0 text-xs text-muted-foreground">{d.kind === "link" ? typeLabel(d) : formatBytes(d.sizeBytes)}</span>
               </DocLink>
+              <DocRowMenu doc={d} />
             </li>
           ))}
         </ul>

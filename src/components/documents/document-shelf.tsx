@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { AddDocumentMenu, AddIconButton, DocIcon, DocLink, DocumentPreview } from "./parts";
+import { Pin } from "lucide-react";
+import { AddDocumentMenu, AddIconButton, DocIcon, DocLink, DocRowMenu, DocumentPreview } from "./parts";
 import { dragHasFiles, useDocuments, useUpload, type DocumentDto } from "./use-documents";
 
 const s = t.documents;
@@ -25,18 +26,20 @@ export function DocumentShelf() {
   const general = pick(all.filter((d) => !d.projectId));
   const byProject = pick(all.filter((d) => d.projectId));
   const row = (d: DocumentDto) => (
-    <li key={d.id}>
+    <li key={d.id} className="group flex items-center rounded-md hover:bg-sidebar-accent">
       <DocLink
         doc={d}
         onPreview={setPreview}
-        className="flex min-h-8 items-center gap-2.5 rounded-md px-2.5 py-1 text-[15px] text-foreground/85 transition-colors hover:bg-sidebar-accent hover:text-foreground"
+        className="flex min-h-8 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2.5 py-1 text-[15px] text-foreground/85 transition-colors hover:bg-sidebar-accent hover:text-foreground"
       >
         <DocIcon doc={d} />
         <span className="grid min-w-0">
           {d.projectName && <span className="truncate text-xs leading-tight text-muted-foreground">{d.projectName}</span>}
           <span className="truncate">{d.name}</span>
         </span>
+        {d.pinned && <Pin className="size-3 flex-none text-muted-foreground" aria-label={s.pinnedFirst} />}
       </DocLink>
+      <DocRowMenu doc={d} />
     </li>
   );
 

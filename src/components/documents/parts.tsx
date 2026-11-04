@@ -1,6 +1,6 @@
 "use client";
 
-import { FileImage, FileSpreadsheet, FileText, Link2, Plus, Upload } from "lucide-react";
+import { FileImage, FileSpreadsheet, FileText, Link2, MoreHorizontal, Pin, PinOff, Plus, Trash2, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { t } from "@/i18n";
+import { fmt, t } from "@/i18n";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ACCEPT } from "./file-types";
-import { useAddLink, useUpload, type DocumentDto } from "./use-documents";
+import { useAddLink, usePinDocument, useRemoveDocument, useUpload, type DocumentDto } from "./use-documents";
 
 const s = t.documents;
 
@@ -175,5 +175,35 @@ export function DocLink({ doc, onPreview, className, children }: { doc: Document
     >
       {children}
     </a>
+  );
+}
+
+/** Row menu for a document: pin / unpin and remove (with Undo). Used in the sidebar and the project panel. */
+export function DocRowMenu({ doc }: { doc: DocumentDto }) {
+  const remove = useRemoveDocument();
+  const pin = usePinDocument();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="flex-none text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 max-lg:opacity-100"
+          aria-label={fmt(t.documents.actions.menuFor, { name: doc.name })}
+        >
+          <MoreHorizontal />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onSelect={() => pin.mutate({ id: doc.id, pinned: !doc.pinned })}>
+          {doc.pinned ? <PinOff aria-hidden /> : <Pin aria-hidden />}
+          {doc.pinned ? t.documents.actions.unpin : t.documents.actions.pin}
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onSelect={() => remove.mutate(doc)}>
+          <Trash2 aria-hidden />
+          {t.documents.actions.remove}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
