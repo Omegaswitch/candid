@@ -92,7 +92,6 @@ export function MembersSettings() {
 
 function MemberRow({ person, isMe, isAdmin, soleAdmin }: { person: MemberSummary; isMe: boolean; isAdmin: boolean; soleAdmin: boolean }) {
   const qc = useQueryClient();
-  const noteId = useId();
   const setRole = useMutation({
     mutationFn: (role: Role) => api<{ member: MemberSummary }>(`/api/members/${person.id}`, { method: "PATCH", json: { role } }),
     onMutate: (role) => {
@@ -129,9 +128,9 @@ function MemberRow({ person, isMe, isAdmin, soleAdmin }: { person: MemberSummary
         ) : (
           <span className="text-xs text-muted-foreground">{t.settings.statuses.active}</span>
         )}
-        {isAdmin ? (
-          <Select value={person.role} onValueChange={(v) => setRole.mutate(v as Role)} disabled={soleAdmin || setRole.isPending}>
-            <SelectTrigger className="w-28 data-[size=default]:h-9" aria-label={fmt(m.changeRoleFor, { name: person.name })} aria-describedby={soleAdmin ? noteId : undefined}>
+        {isAdmin && !soleAdmin ? (
+          <Select value={person.role} onValueChange={(v) => setRole.mutate(v as Role)} disabled={setRole.isPending}>
+            <SelectTrigger className="w-28 data-[size=default]:h-9" aria-label={fmt(m.changeRoleFor, { name: person.name })}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -140,11 +139,11 @@ function MemberRow({ person, isMe, isAdmin, soleAdmin }: { person: MemberSummary
             </SelectContent>
           </Select>
         ) : (
-          <span className="w-16">{t.settings.roles[person.role]}</span>
+          <span className={isAdmin ? "w-28 px-2.5" : "w-16"}>{t.settings.roles[person.role]}</span>
         )}
         {isAdmin &&
           (soleAdmin ? (
-            <span id={noteId} className="w-40 text-xs text-muted-foreground">
+            <span className="w-40 text-xs text-muted-foreground">
               {m.lastAdmin}
             </span>
           ) : (

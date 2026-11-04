@@ -54,7 +54,7 @@ export function TemplatesSettings() {
           </Button>
         )}
       </div>
-      <p className="mb-8 max-w-2xl text-muted-foreground">
+      <p className="max-w-2xl text-muted-foreground">
         {s.help} {!isAdmin && t.settings.adminOnly}
       </p>
 

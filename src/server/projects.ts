@@ -146,7 +146,7 @@ export async function createProject(
       const [tpl] = await tx
         .select({ id: projectTemplates.id })
         .from(projectTemplates)
-        .where(and(eq(projectTemplates.id, raw.templateId), eq(projectTemplates.workspaceId, ctx.workspaceId)));
+        .where(and(eq(projectTemplates.id, raw.templateId), eq(projectTemplates.workspaceId, ctx.workspaceId), isNull(projectTemplates.archivedAt)));
       if (!tpl) throw notFound("Template");
       // Copied, not linked: later template edits never touch this project.
       seed = await tx
