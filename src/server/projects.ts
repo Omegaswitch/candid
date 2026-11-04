@@ -152,7 +152,7 @@ export async function createProject(
       .returning();
 
     let seed = raw.tasks ?? [];
-    if (raw.templateId) {
+    if (raw.templateId && !raw.tasks) {
       const [tpl] = await tx
         .select({ id: projectTemplates.id })
         .from(projectTemplates)

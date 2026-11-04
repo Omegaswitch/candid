@@ -13,7 +13,8 @@ import {
 import { fmt, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { ProjectSummary } from "@/server/projects";
-import { ChecklistTrack, DueLabel, HighPriority, Initials, StatusPill } from "./project-bits";
+import { DueLabel, HighPriority, Initials, StatusPill } from "./project-bits";
+import { ProgressRing } from "./progress-ring";
 
 export type CardActions = {
   open: (id: string) => void;
@@ -141,9 +142,9 @@ export const ProjectCard = memo(function ProjectCard({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <ChecklistTrack done={p.doneCount} total={p.taskCount} />
-        <div className="flex items-baseline justify-between gap-3 text-xs">
+      <div className="flex items-center gap-3">
+        <ProgressRing done={p.doneCount} total={p.taskCount} />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
           <span className="num text-muted-foreground">
             {p.taskCount ? fmt(t.projects.progress, { done: p.doneCount, total: p.taskCount }) : t.projects.noTasks}
           </span>

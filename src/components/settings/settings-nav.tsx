@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 
 const ITEMS = [
-  { href: "/settings", label: t.settings.nav.general },
-  { href: "/settings/members", label: t.settings.nav.members },
-  { href: "/settings/templates", label: t.settings.nav.templates },
-  { href: "/settings/integrations", label: t.settings.nav.integrations },
+  { href: "/settings", get label() { return t.settings.nav.general; } },
+  { href: "/settings/members", get label() { return t.settings.nav.members; } },
+  { href: "/settings/templates", get label() { return t.settings.nav.templates; } },
+  { href: "/settings/integrations", get label() { return t.settings.nav.integrations; } },
 ] as const;
 
 /** Plain links, one per settings area; each area is its own route with its own h1. */

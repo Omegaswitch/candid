@@ -15,20 +15,23 @@ import { fmt, plural, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { useEscapeCancel } from "./inline-text";
 import { TaskRow } from "./task-row";
+import { ProgressRing } from "@/components/projects/progress-ring";
 
-/** "2 of 4 completed" and one segment per task; done segments carry the hue, open ones stay grey. */
+/** The step ring and "2 of 4 completed"; the ring fills one step per ticked item. */
 export function Progress({ tasks }: { tasks: Task[] }) {
   const done = tasks.filter((x) => x.done).length;
+  const next = tasks.find((x) => !x.done);
   return (
-    <div className="grid gap-2">
-      <p className="num text-sm text-muted-foreground">{fmt(t.tasks.progress, { done, total: tasks.length })}</p>
-      {tasks.length > 0 && (
-        <div aria-hidden className="flex h-1.5 gap-0.5">
-          {[...tasks].sort((a, b) => Number(b.done) - Number(a.done)).map((x) => (
-            <span key={x.id} className={cn("flex-1 rounded-full transition-colors duration-200", x.done ? "bg-hue" : "bg-raised")} />
-          ))}
-        </div>
-      )}
+    <div className="flex items-center gap-4">
+      <ProgressRing done={done} total={tasks.length} size={64} />
+      <div className="grid min-w-0 gap-0.5">
+        <p className="num text-sm font-medium">{fmt(t.tasks.progress, { done, total: tasks.length })}</p>
+        {next && (
+          <p className="truncate text-sm text-muted-foreground">
+            {t.projects.next}: <span className="text-foreground">{next.title}</span>
+          </p>
+        )}
+      </div>
     </div>
   );
 }

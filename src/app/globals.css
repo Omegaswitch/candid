@@ -71,7 +71,7 @@
    --negative (overdue). Every colour is a semantic token; components never use raw hex. */
 :root {
   --ground: #f2f4f7; /* the face: a blue-grey ledger ground instead of #f8f8f8 */
-  --surface: #ffffff;
+  --surface: #fbfbfc; /* soft white: cards and menus sit just off pure white */
   --raised: #eeeeee;
   --rule: #f0f0f0;
   --hue: #1d5fbf;
@@ -181,6 +181,16 @@
   /* Numbers that update or align use tabular figures. */
   .num { font-variant-numeric: tabular-nums; }
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+}
+
+/* Theme switch: colours cross-fade for a moment instead of snapping (class set by ThemeMenu). */
+@media (prefers-reduced-motion: no-preference) {
+  .theme-fade,
+  .theme-fade *,
+  .theme-fade *::before,
+  .theme-fade *::after {
+    transition: background-color 300ms ease, border-color 300ms ease, color 300ms ease, fill 300ms ease, stroke 300ms ease !important;
+  }
 }
 
 /* Motion is feedback only (fast, small). With reduced motion it is removed, content stays. */

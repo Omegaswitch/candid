@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -67,6 +67,27 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const list = templates.data ?? [];
   const chosen = list.find((x) => x.id === templateId);
+  // The checklist starts from the template and stays editable before the project exists.
+  const [steps, setSteps] = useState<string[]>([]);
+  const [newStep, setNewStep] = useState("");
+  const pickTemplate = (id: string) => {
+    setTemplate(id);
+    setSteps(list.find((x) => x.id === id)?.tasks.map((x) => x.title) ?? []);
+  };
+  const addStep = () => {
+    const v = newStep.trim();
+    if (!v) return;
+    setSteps((s) => [...s, v]);
+    setNewStep("");
+  };
+  const moveStep = (i: number, d: -1 | 1) =>
+    setSteps((s) => {
+      const j = i + d;
+      if (j < 0 || j >= s.length) return s;
+      const n = [...s];
+      [n[i], n[j]] = [n[j], n[i]];
+      return n;
+    });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +99,8 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
         ownerId: ownerId === NONE ? null : ownerId,
         dueDate: dueDate || null,
         priority,
-        templateId: templateId === NONE ? null : templateId,
+        templateId: null,
+        tasks: [...steps, ...(newStep.trim() ? [newStep.trim()] : [])].map((title) => ({ title })),
       },
       {
         onSuccess: (p) => {
@@ -156,7 +178,7 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
       {list.length > 0 && (
         <div className="grid gap-1.5">
           <Label htmlFor="np-template">{c.template}</Label>
-          <Select value={templateId} onValueChange={setTemplate}>
+          <Select value={templateId} onValueChange={pickTemplate}>
             <SelectTrigger id="np-template" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -177,6 +199,51 @@ function NewProjectForm({ onDone }: { onDone: () => void }) {
           )}
         </div>
       )}
+      <fieldset className="grid gap-1.5">
+        <legend className="mb-1.5 text-sm font-medium">{c.steps}</legend>
+        {steps.length > 0 && (
+          <ol className="grid max-h-56 gap-1 overflow-y-auto">
+            {steps.map((s, i) => (
+              <li key={`${i}-${s}`} className="flex items-center gap-1.5 rounded-md border bg-background px-2 py-1">
+                <span className="num w-5 flex-none text-right text-xs text-muted-foreground">{i + 1}.</span>
+                <Input
+                  value={s}
+                  onChange={(e) => setSteps((all) => all.map((x, j) => (j === i ? e.target.value : x)))}
+                  onBlur={() => setSteps((all) => all.filter((x) => x.trim()))}
+                  aria-label={fmt(c.stepN, { n: i + 1 })}
+                  className="h-8 border-0 bg-transparent px-1 shadow-none focus-visible:ring-1"
+                />
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={fmt(c.moveUp, { n: i + 1 })} disabled={i === 0} onClick={() => moveStep(i, -1)}>
+                  <ArrowUp />
+                </Button>
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={fmt(c.moveDown, { n: i + 1 })} disabled={i === steps.length - 1} onClick={() => moveStep(i, 1)}>
+                  <ArrowDown />
+                </Button>
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={fmt(c.removeStep, { n: i + 1 })} onClick={() => setSteps((all) => all.filter((_, j) => j !== i))}>
+                  <X />
+                </Button>
+              </li>
+            ))}
+          </ol>
+        )}
+        <div className="flex gap-2">
+          <Input
+            value={newStep}
+            onChange={(e) => setNewStep(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addStep();
+              }
+            }}
+            placeholder={c.addStepPlaceholder}
+            aria-label={c.addStep}
+          />
+          <Button type="button" variant="outline" onClick={addStep} disabled={!newStep.trim()}>
+            <Plus /> {c.addStep}
+          </Button>
+        </div>
+      </fieldset>
       {error && (
         <p id="np-error" role="alert" className="text-sm text-negative">
           {error}

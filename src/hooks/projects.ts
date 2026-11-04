@@ -164,6 +164,8 @@ export type NewProject = {
   dueDate: string | null;
   priority: "normal" | "high";
   templateId: string | null;
+  /** The checklist as set in the dialog; sent instead of copying the template server-side. */
+  tasks?: { title: string }[];
 };
 export function useCreateProject() {
   const qc = useQueryClient();

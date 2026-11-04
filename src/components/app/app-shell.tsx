@@ -35,12 +35,12 @@ import { OfflineNotice } from "./offline-notice";
 type NavItem = { href: string; label: string; icon: LucideIcon; count?: "mine" | "dueThisWeek" | "overdue" | "waiting" };
 
 const NAV: NavItem[] = [
-  { href: "/", label: t.nav.allProjects, icon: FolderKanban },
-  { href: "/my-tasks", label: t.nav.myTasks, icon: ListChecks, count: "mine" },
-  { href: "/due-soon", label: t.nav.dueSoon, icon: CalendarClock, count: "dueThisWeek" },
-  { href: "/overdue", label: t.nav.overdue, icon: CircleAlert, count: "overdue" },
-  { href: "/waiting", label: t.nav.waiting, icon: Hourglass, count: "waiting" },
-  { href: "/archive", label: t.nav.archive, icon: Archive },
+  { href: "/", get label() { return t.nav.allProjects; }, icon: FolderKanban },
+  { href: "/my-tasks", get label() { return t.nav.myTasks; }, icon: ListChecks, count: "mine" },
+  { href: "/due-soon", get label() { return t.nav.dueSoon; }, icon: CalendarClock, count: "dueThisWeek" },
+  { href: "/overdue", get label() { return t.nav.overdue; }, icon: CircleAlert, count: "overdue" },
+  { href: "/waiting", get label() { return t.nav.waiting; }, icon: Hourglass, count: "waiting" },
+  { href: "/archive", get label() { return t.nav.archive; }, icon: Archive },
 ];
 
 /** The product mark: a ticked line over an open line — a checklist, drawn for Candid. */
@@ -114,7 +114,7 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
         </>
       )}
       <div className="mt-auto flex flex-col gap-0.5">
-        <NavLink item={{ href: "/settings", label: t.nav.settings, icon: Settings }} collapsed={collapsed} onNavigate={onNavigate} />
+        <NavLink item={{ href: "/settings", get label() { return t.nav.settings; }, icon: Settings }} collapsed={collapsed} onNavigate={onNavigate} />
       </div>
     </div>
   );

@@ -114,6 +114,7 @@ export const projects = {
     progress: "Progress",
     next: "Next task",
     due: "Due",
+    actions: "Actions",
   },
 
   archive: {
@@ -129,6 +130,13 @@ export const projects = {
   },
 
   create: {
+    steps: "Checklist",
+    stepN: "Step {n}",
+    addStep: "Add step",
+    addStepPlaceholder: "Type a step and press Enter",
+    moveUp: "Move step {n} up",
+    moveDown: "Move step {n} down",
+    removeStep: "Remove step {n}",
     title: "Add project",
     name: "Name",
     client: "Client",

@@ -25,7 +25,7 @@ export function Providers({ children }: { children: ReactNode }) {
   );
   return (
     // next-themes injects a blocking script so the right theme applies before first paint.
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={client}>
         <TooltipProvider delayDuration={300}>
           {children}

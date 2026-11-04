@@ -6,6 +6,9 @@ import { ArrowDown, ArrowUp, ChevronDown, GripVertical, MoreHorizontal, PanelBot
 import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import ClickSpark from "@/components/ClickSpark";
+import { cssVar } from "@/lib/css-var";
+import SpringCheck from "@/components/SpringCheck";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -157,23 +160,32 @@ export function TaskRow({
             ref={setActivatorNodeRef}
             type="button"
             aria-label={fmt(t.tasks.dragHandle, title)}
-            className="mt-1 flex h-6 w-4 flex-none cursor-grab touch-none items-center justify-center rounded text-muted-foreground/60 hover:text-foreground active:cursor-grabbing"
+            className="mt-1 flex h-6 w-4 flex-none cursor-grab touch-none items-center justify-center rounded text-muted-foreground/80 hover:text-foreground active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
             <GripVertical aria-hidden className="size-3.5" />
           </button>
         )}
-        <span className="flex h-8 w-6 flex-none items-center justify-center">
+        <span className="flex h-11 w-8 flex-none items-center justify-center">
           {selecting ? (
             <Checkbox checked={selected} onCheckedChange={(v) => onSelect(v === true)} aria-label={fmt(t.tasks.selectTask, title)} />
           ) : (
-            <Checkbox
-              checked={task.done}
-              onCheckedChange={onToggle}
-              aria-label={fmt(task.done ? t.tasks.reopen : t.tasks.complete, title)}
-              className="rounded-full data-checked:border-positive data-checked:bg-positive dark:data-checked:bg-positive"
-            />
+            <ClickSpark sparkColor={cssVar("--positive", "#2e7d32")} sparkCount={10} sparkRadius={18} sparkSize={6} duration={380} disabled={task.done}>
+              <SpringCheck
+                checked={task.done}
+                onChange={() => onToggle()}
+                label=""
+                strike="none"
+                boxSize={20}
+                boxRadius={10}
+                color="var(--foreground)"
+                fillColor="var(--positive)"
+                checkColor="var(--primary-foreground)"
+                ariaLabel={fmt(task.done ? t.tasks.reopen : t.tasks.complete, title)}
+                className="gap-0"
+              />
+            </ClickSpark>
           )}
         </span>
         <div className="grid min-w-0 flex-1 gap-0.5 py-1">
