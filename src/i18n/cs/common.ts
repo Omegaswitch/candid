@@ -35,6 +35,8 @@ export const common: Localized<typeof import("../en/common").common> = {
   signOut: "Odhlásit se",
   devSignInTitle: "Vývojové přihlášení",
   devSignInNote: "Místní náhrada za Clerk. Na nasazených verzích je vypnutá.",
+  notMemberTitle: "Zatím nemáte přístup",
+  signOutSwitch: "Odhlásit se a použít jiný účet",
   notMember: "Váš účet zatím není členem tohoto pracovního prostoru. Požádejte správce o\u00a0pozvánku.",
   theme: { label: "Vzhled", light: "Světlý", dark: "Tmavý", system: "Podle systému" },
   conflict: {

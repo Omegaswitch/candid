@@ -7,7 +7,8 @@ import { db } from "@/db";
 import { workspaces } from "@/db/schema";
 import { qk } from "@/lib/query-keys";
 import { t } from "@/i18n";
-import { authMode, getAuthUserId } from "@/lib/auth/session";
+import { authMode, getAuthProfile, getAuthUserId } from "@/lib/auth/session";
+import { NotMember } from "@/components/app/not-member";
 import { getCtx } from "@/server/context";
 import { listMembers } from "@/server/members";
 import { getPrefs } from "@/server/preferences";
@@ -18,6 +19,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (!(await getAuthUserId())) redirect("/sign-in");
   const ctx = await getCtx();
   if (!ctx) {
+    if (authMode === "clerk") return <NotMember email={(await getAuthProfile())?.email ?? null} />;
     return <main className="mx-auto max-w-md p-10 text-base">{t.common.notMember}</main>;
   }
   const [prefs, members, [ws]] = await Promise.all([

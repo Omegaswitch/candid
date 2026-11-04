@@ -30,6 +30,8 @@ export const common = {
   signOut: "Sign out",
   devSignInTitle: "Development sign-in",
   devSignInNote: "Local stand-in for Clerk. Disabled on deployments.",
+  notMemberTitle: "No access yet",
+  signOutSwitch: "Sign out and use another account",
   notMember: "Your account is not a member of this workspace yet. Ask an admin to invite you.",
   theme: { label: "Theme", light: "Light", dark: "Dark", system: "System" },
   conflict: {
