@@ -21,8 +21,9 @@ export function ProjectDocuments({ projectId }: { projectId: string }) {
   const list = (docs.data ?? []).filter((d) => d.projectId === projectId);
 
   return (
-    <div
-      className={cn("flex flex-col gap-1 rounded-md outline-1 outline-transparent transition-colors", dragging && "bg-muted outline-dashed outline-border")}
+    <section
+      aria-labelledby={`project-docs-${projectId}`}
+      className={cn("flex flex-col gap-1.5 rounded-md outline-1 outline-transparent transition-colors", dragging && "bg-muted outline-dashed outline-border")}
       onDragOver={(e) => {
         if (!dragHasFiles(e)) return;
         e.preventDefault();
@@ -36,6 +37,9 @@ export function ProjectDocuments({ projectId }: { projectId: string }) {
         upload(Array.from(e.dataTransfer.files), { projectId });
       }}
     >
+      <h3 id={`project-docs-${projectId}`} className="text-sm font-medium">
+        {s.title}
+      </h3>
       {docs.isPending ? (
         <div className="flex flex-col gap-2 py-1" aria-busy>
           {[0, 1].map((i) => (
@@ -73,6 +77,6 @@ export function ProjectDocuments({ projectId }: { projectId: string }) {
         </AddDocumentMenu>
       </div>
       {preview && <DocumentPreview doc={preview} onClose={() => setPreview(null)} />}
-    </div>
+    </section>
   );
 }
