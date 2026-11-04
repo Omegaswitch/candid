@@ -60,6 +60,13 @@ export const settings = {
     lastAdmin: "The only admin cannot be removed or made a member",
   },
 
+  storage: {
+    title: "Storage",
+    help: "Space used by uploaded documents. Removed files count until they are purged after 7 days.",
+    of: "of {limit} free · {pct} %",
+    files: "{n} files",
+    pending: "{size} waiting to be purged",
+  },
   templates: {
     isDefault: "Default for new projects",
     makeDefault: "Use for new projects",

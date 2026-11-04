@@ -62,6 +62,9 @@ export const documents: Localized<typeof import("../en/documents").documents> = 
     storage: "Úložiště nahrání odmítlo. Zkuste to znovu.",
   },
   preview: {
+    newTab: "Otevřít v nové kartě",
+    previous: "Předchozí příloha",
+    next: "Další příloha",
     noPreview: "Pro tento typ souboru není k\u00a0dispozici náhled.",
     download: "Stáhnout",
     openLink: "Otevřít odkaz",

@@ -399,3 +399,18 @@ export async function purgeRemovedDocuments(opts: { days?: number; now?: Date } 
   }
   return { purged };
 }
+
+// ---------------------------------------------------------------- usage
+
+/** Storage used by this workspace: live files, plus removed ones still kept until the 7-day purge. */
+export async function storageUsage(ctx: Ctx) {
+  const [row] = await db
+    .select({
+      files: sql<number>`count(*) filter (where ${documents.deletedAt} is null)::int`,
+      bytes: sql<number>`coalesce(sum(${documents.sizeBytes}) filter (where ${documents.deletedAt} is null), 0)::float8`,
+      removedBytes: sql<number>`coalesce(sum(${documents.sizeBytes}) filter (where ${documents.deletedAt} is not null), 0)::float8`,
+    })
+    .from(documents)
+    .where(and(eq(documents.workspaceId, ctx.workspaceId), eq(documents.kind, "file"), isNotNull(documents.uploadedAt)));
+  return row;
+}

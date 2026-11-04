@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { LanguageSwitch } from "@/components/app/language-switch";
+import { StorageUsage } from "./storage-usage";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { useSession } from "@/components/app/session";
@@ -52,6 +53,9 @@ export function GeneralSettings() {
             <span className="num">{local?.now ?? t.common.none}</span>
           </Field>
         </dl>
+      </SettingsSection>
+      <SettingsSection title={t.settings.storage.title} description={t.settings.storage.help}>
+        <StorageUsage />
       </SettingsSection>
       <SettingsSection title={g.privacyTitle} description={g.privacyHelp}>
         <Link href="/privacy" className="font-medium underline-offset-4 hover:underline">

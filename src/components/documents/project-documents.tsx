@@ -79,7 +79,7 @@ export function ProjectDocuments({ projectId }: { projectId: string }) {
           </Button>
         </AddDocumentMenu>
       </div>
-      {preview && <DocumentPreview doc={preview} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreview doc={preview} docs={list} onClose={() => setPreview(null)} />}
     </section>
   );
 }

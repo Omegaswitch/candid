@@ -202,7 +202,7 @@ export function DocumentsPage() {
       </div>
 
       <LinkDialog open={linkOpen} onOpenChange={setLinkOpen} />
-      {preview && <DocumentPreview doc={preview} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreview doc={preview} docs={list} onClose={() => setPreview(null)} />}
     </div>
   );
 }

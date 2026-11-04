@@ -63,6 +63,13 @@ export const settings: Localized<typeof import("../en/settings").settings> = {
     lastAdmin: "Jediného správce nelze odebrat ani změnit na člena",
   },
 
+  storage: {
+    title: "Úložiště",
+    help: "Místo zabrané nahranými dokumenty. Odebrané soubory se započítávají, dokud se po 7\u00a0dnech nesmažou.",
+    of: "z {limit} zdarma · {pct} %",
+    files: "Souborů: {n}",
+    pending: "{size} čeká na smazání",
+  },
   templates: {
     isDefault: "Výchozí pro nové projekty",
     makeDefault: "Použít pro nové projekty",

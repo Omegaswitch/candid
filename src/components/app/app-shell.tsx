@@ -99,7 +99,10 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
         {!collapsed && (
           <div className="min-w-0 leading-tight">
             <div className="font-semibold">{t.common.appName}</div>
-            <div className="truncate text-xs text-muted-foreground">{session.workspaceName}</div>
+            {/* The workspace line only when it says something the app name does not. */}
+            {session.workspaceName && session.workspaceName !== t.common.appName && (
+              <div className="truncate text-xs text-muted-foreground">{session.workspaceName}</div>
+            )}
           </div>
         )}
       </div>

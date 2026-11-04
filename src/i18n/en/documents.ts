@@ -64,6 +64,9 @@ export const documents = {
     noPreview: "There is no preview for this file type.",
     download: "Download",
     openLink: "Open link",
+    newTab: "Open in new tab",
+    previous: "Previous attachment",
+    next: "Next attachment",
     details: "{type} · {size}",
   },
 };
