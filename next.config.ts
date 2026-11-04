@@ -7,7 +7,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://img.clerk.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.r2.cloudflarestorage.com https://*.amazonaws.com",
+  "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.com:* https://*.r2.cloudflarestorage.com https://*.amazonaws.com",
   "frame-src 'self' https://challenges.cloudflare.com",
   "worker-src 'self' blob:",
   "form-action 'self' https://*.r2.cloudflarestorage.com https://*.amazonaws.com",
