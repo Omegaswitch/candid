@@ -2,8 +2,9 @@
 
 import { ArrowDownUp, Download, FileDown, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getViewIds } from "@/lib/view-context";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
@@ -20,7 +21,20 @@ export function ImportExportMenu() {
   const [open, setOpen] = useState<"import" | "export" | null>(null);
   // Each opening of the wizard is a new import with its own idempotency key.
   const [session, setSession] = useState(0);
-  const projectId = PROJECT_PATH.exec(usePathname() ?? "")?.[1];
+  const pathname = usePathname();
+  const projectId = PROJECT_PATH.exec(pathname ?? "")?.[1];
+  const params = useSearchParams();
+  const router = useRouter();
+  const viewIds = pathname === "/" ? getViewIds() : null;
+
+  // The command menu opens these via /?import=1 and /?export=1.
+  useEffect(() => {
+    const want = params.get("import") === "1" ? "import" : params.get("export") === "1" ? "export" : null;
+    if (!want) return;
+    if (want === "import") setSession((n) => n + 1);
+    setOpen(want);
+    router.replace(pathname ?? "/");
+  }, [params, pathname, router]);
 
   return (
     <>
@@ -59,7 +73,13 @@ export function ImportExportMenu() {
         <ExportDialog
           open
           onOpenChange={(o) => !o && setOpen(null)}
-          preset={projectId ? { scope: "project", projectIds: [projectId] } : undefined}
+          preset={
+            projectId
+              ? { scope: "project", projectIds: [projectId] }
+              : viewIds?.length
+                ? { scope: "view", projectIds: viewIds }
+                : undefined
+          }
         />
       )}
     </>

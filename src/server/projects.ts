@@ -9,7 +9,8 @@ import { AppError, conflict, notFound } from "./errors";
 import { assertMembers } from "./members";
 
 export const isoDate = z.iso.date();
-const nullableText = z.string().trim().max(200).nullish().transform((v) => v || null);
+// Omitted stays undefined (leave as is); empty string or null clears it.
+const nullableText = z.string().trim().max(200).nullish().transform((v) => (v === undefined ? undefined : v || null));
 
 export const projectInput = z.object({
   name: z.string().trim().min(1).max(200),
@@ -22,7 +23,16 @@ export const projectInput = z.object({
 });
 export type ProjectInput = z.input<typeof projectInput>;
 
-export const projectPatch = projectInput.omit({ notes: true }).partial().extend({ version: z.int() });
+// Built without defaults: in zod 4 `.default()` survives `.partial()`, which would reset omitted fields.
+export const projectPatch = z.object({
+  name: projectInput.shape.name.optional(),
+  client: nullableText,
+  ownerId: z.uuid().nullish(),
+  status: z.enum(["active", "waiting", "completed"]).optional(),
+  priority: z.enum(["normal", "high"]).optional(),
+  dueDate: isoDate.nullish(),
+  version: z.int(),
+});
 
 export type ProjectSummary = {
   id: string;

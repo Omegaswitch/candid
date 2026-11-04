@@ -39,3 +39,15 @@ describe("projects", () => {
     expect(await listProjectSummaries(b)).toHaveLength(0);
   });
 });
+
+describe("partial updates", () => {
+  it("leave omitted fields untouched", async () => {
+    const ctx = await makeCtx();
+    const p = await createProject(ctx, { name: "Keep", client: "Client", status: "waiting", priority: "high" });
+    const after = await updateProject(ctx, p.id, { name: "Kept", version: p.version });
+    expect(after).toMatchObject({ client: "Client", status: "waiting", priority: "high" });
+    const t = await createTask(ctx, p.id, { title: "x", note: "keep me", waiting: true });
+    const done = await updateTask(ctx, t.id, { done: true, version: t.version });
+    expect(done).toMatchObject({ note: "keep me", waiting: true, done: true });
+  });
+});

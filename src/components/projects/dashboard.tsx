@@ -14,7 +14,7 @@ import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordi
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Counter from "@/components/Counter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +30,10 @@ import { type CardActions, ProjectCard } from "./project-card";
 import { activeFilterCount, type Filters, ProjectToolbar } from "./project-filters";
 import { ProjectSheet } from "./project-sheet";
 import { ProjectTable } from "./project-table";
+import { setViewIds } from "@/lib/view-context";
+import dynamic from "next/dynamic";
+
+const ExportDialog = dynamic(() => import("@/components/import-export/export-dialog").then((m) => m.ExportDialog), { ssr: false });
 
 const DEFAULT_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null };
 
@@ -103,6 +107,24 @@ export function Dashboard() {
   }, [all, counts.data?.dueThisWeek]);
 
   const canReorder = sort === "manual" && !filtered;
+
+  // "Current view" export uses the filtered ids; "Selected" uses the table checkboxes.
+  useEffect(() => {
+    setViewIds(filtered ? shown.map((p) => p.id) : null);
+    return () => setViewIds(null);
+  }, [filtered, shown]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exportingSelected, setExportingSelected] = useState(false);
+  const onSelect = useCallback((ids: string[], on: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }, []);
 
   // URL is the source of truth for the panel: native history keeps the dashboard mounted.
   const open = useCallback((id: string) => window.history.pushState(null, "", `/projects/${id}`), []);
@@ -197,7 +219,23 @@ export function Dashboard() {
           )}
         </div>
       ) : view === "table" ? (
-        <ProjectTable projects={shown} ownerName={ownerName} today={today} actions={actions} />
+        <>
+          {selected.size > 0 && (
+            <div role="status" className="flex items-center gap-3 rounded-lg border bg-card px-4 py-2 text-sm">
+              <span className="num font-medium">{fmt(t.projects.selection.count, { n: selected.size })}</span>
+              <Button size="sm" variant="outline" onClick={() => setExportingSelected(true)}>
+                {t.projects.selection.export}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+                {t.projects.selection.clear}
+              </Button>
+            </div>
+          )}
+          <ProjectTable projects={shown} ownerName={ownerName} today={today} actions={actions} selected={selected} onSelect={onSelect} />
+          {exportingSelected && (
+            <ExportDialog open onOpenChange={(o) => !o && setExportingSelected(false)} preset={{ scope: "selected", projectIds: [...selected] }} />
+          )}
+        </>
       ) : canReorder ? (
         <SortableGrid projects={shown} ownerName={ownerName} today={today} actions={actions} onReorder={(ids) => reorder.mutate(ids)} />
       ) : (

@@ -66,6 +66,13 @@ export const projects = {
   dragEnd: "{name} dropped at position {position} of {total}.",
   dragCancel: "Reorder of {name} cancelled.",
 
+  selection: {
+    all: "Select all projects in this view",
+    one: "Select {name}",
+    count: "{n} selected",
+    export: "Export selected",
+    clear: "Clear selection",
+  },
   menu: {
     label: "Actions for {name}",
     open: "Open",

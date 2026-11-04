@@ -17,7 +17,17 @@ export const taskInput = z.object({
   waiting: z.boolean().default(false),
   waitingReason: z.string().trim().max(500).nullish(),
 });
-export const taskPatch = taskInput.partial().extend({ done: z.boolean().optional(), version: z.int() });
+// No defaults here (zod 4 keeps `.default()` inside `.partial()`, which would wipe omitted fields).
+export const taskPatch = z.object({
+  title: taskInput.shape.title.optional(),
+  assigneeId: z.uuid().nullish(),
+  dueDate: isoDate.nullish(),
+  note: z.string().max(20_000).optional(),
+  waiting: z.boolean().optional(),
+  waitingReason: z.string().trim().max(500).nullish(),
+  done: z.boolean().optional(),
+  version: z.int(),
+});
 
 async function loadTask(ctx: Ctx, id: string) {
   const [t] = await db

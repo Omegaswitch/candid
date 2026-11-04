@@ -1,5 +1,6 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { fmt, t } from "@/i18n";
 import type { ProjectSummary } from "@/server/projects";
 import { type CardActions, openOnClick, ProjectMenu } from "./project-card";
@@ -11,17 +12,29 @@ export function ProjectTable({
   ownerName,
   today,
   actions,
+  selected,
+  onSelect,
 }: {
   projects: ProjectSummary[];
   ownerName: (id: string | null) => string | null;
   today: string;
   actions: CardActions;
+  selected: Set<string>;
+  onSelect: (ids: string[], on: boolean) => void;
 }) {
+  const allOn = projects.length > 0 && projects.every((p) => selected.has(p.id));
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
       <table className="w-full table-fixed text-sm">
         <thead className="hidden text-left text-xs text-muted-foreground sm:table-header-group">
           <tr className="h-9 border-b">
+            <th className="w-10 pl-4">
+              <Checkbox
+                checked={allOn ? true : selected.size ? "indeterminate" : false}
+                onCheckedChange={(v) => onSelect(projects.map((p) => p.id), v === true)}
+                aria-label={t.projects.selection.all}
+              />
+            </th>
             <th className="w-[34%] xl:w-[27%] pl-4 font-normal">{t.projects.table.name}</th>
             <th className="w-[13%] xl:w-[11%] font-normal">{t.projects.table.status}</th>
             <th className="w-[19%] xl:w-[15%] font-normal">{t.projects.table.progress}</th>
@@ -34,7 +47,14 @@ export function ProjectTable({
         <tbody>
           {projects.map((p, i) => (
             <tr key={p.id} className="relative flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-2.5 last:border-0 hover:bg-accent/40 sm:table-row sm:h-12 sm:p-0">
-              <td className="min-w-0 flex-1 basis-[60%] sm:pl-4">
+              <td className="relative z-10 sm:pl-4">
+                <Checkbox
+                  checked={selected.has(p.id)}
+                  onCheckedChange={(v) => onSelect([p.id], v === true)}
+                  aria-label={fmt(t.projects.selection.one, { name: p.name })}
+                />
+              </td>
+              <td className="min-w-0 flex-1 basis-[60%]">
                 <div className="flex min-w-0 items-center gap-2">
                   <a
                     href={`/projects/${p.id}`}
