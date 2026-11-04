@@ -131,6 +131,7 @@ function NotesField({
 export function ProjectNotes({ projectId, notes, notesVersion }: { projectId: string; notes: string; notesVersion: number }) {
   const save = useProjectNotesSave(projectId);
   const s = useAutosave({
+    key: `notes:${projectId}`,
     serverText: notes,
     serverVersion: notesVersion,
     save,
@@ -159,6 +160,7 @@ export function ProjectNotes({ projectId, notes, notesVersion }: { projectId: st
 export function TaskNote({ projectId, task }: { projectId: string; task: TaskRow }) {
   const save = useTaskNoteSave(projectId);
   const s = useAutosave({
+    key: `task-note:${task.id}`,
     serverText: task.note,
     serverVersion: task.version,
     save: (note, version) => save(task.id, note, version),

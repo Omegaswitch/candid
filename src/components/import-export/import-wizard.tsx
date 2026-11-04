@@ -76,6 +76,20 @@ export function ImportWizard({ open, onOpenChange }: { open: boolean; onOpenChan
     [mapping, table],
   );
 
+  // A column whose dates are all unambiguous in one order needs no question, but the order must still be sent.
+  const detectedOrders = useMemo(
+    () =>
+      Object.fromEntries(
+        DATE_FIELDS.flatMap((field) => {
+          const i = mapping.indexOf(field);
+          if (i < 0) return [];
+          const d = detectDateColumn(table.rows.map((r) => r[i] ?? null)).detected;
+          return d ? [[field, d]] : [];
+        }),
+      ) as Partial<Record<DateQuestion["field"], DateOrder>>,
+    [mapping, table],
+  );
+
   const request: ImportRequest | null = useMemo(
     () =>
       wb
@@ -86,10 +100,10 @@ export function ImportWizard({ open, onOpenChange }: { open: boolean; onOpenChan
             rows: table.rows,
             firstRow: table.firstRow,
             mapping,
-            options: { mode, dateOrders, strictEmails, createMissing: mode === "update" && createMissing, skipRows, acceptDuplicates },
+            options: { mode, dateOrders: { ...detectedOrders, ...dateOrders }, strictEmails, createMissing: mode === "update" && createMissing, skipRows, acceptDuplicates },
           }
         : null,
-    [wb, table, mapping, mode, dateOrders, strictEmails, createMissing, skipRows, acceptDuplicates],
+    [wb, table, mapping, mode, dateOrders, detectedOrders, strictEmails, createMissing, skipRows, acceptDuplicates],
   );
 
   // Preview whenever the review is shown or its inputs change. Stale answers are ignored.

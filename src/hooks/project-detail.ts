@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { Project, Task } from "@/db/schema";
 import { fmt, plural, t } from "@/i18n";
 import { api, ApiError } from "@/lib/api";
+import { clearDraft, markUnsaved, readDraft, saveDraft } from "@/lib/unsaved";
 import { qk } from "@/lib/query-keys";
 import type { ActivityItem } from "@/server/activity-read";
 import type { ProjectSummary } from "@/server/projects";
@@ -339,6 +340,8 @@ type Saved = { text: string; version: number; savedAt: string };
  * from (another field bumped the version) re-saves silently; a real conflict is handed to the UI.
  */
 export function useAutosave(opts: {
+  /** Stable id for drafts and the unsaved registry, e.g. `notes:<projectId>`. */
+  key: string;
   serverText: string;
   serverVersion: number;
   save: (text: string, version: number) => Promise<Saved>;
@@ -346,11 +349,12 @@ export function useAutosave(opts: {
   fromConflict: (current: unknown) => Saved;
   delay?: number;
 }) {
-  const { serverText, serverVersion, delay = 800 } = opts;
-  const [text, setTextState] = useState(serverText);
+  const { key, serverText, serverVersion, delay = 800 } = opts;
+  // A draft left by a failed save (or a closed panel) comes back instead of the server text.
+  const [text, setTextState] = useState(() => readDraft(key) ?? serverText);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<TextConflict | null>(null);
-  const r = useRef({ text: serverText, base: serverText, version: serverVersion, saving: false, conflict: false, timer: 0 as unknown as ReturnType<typeof setTimeout> | 0 });
+  const r = useRef({ text, base: serverText, version: serverVersion, saving: false, conflict: false, timer: 0 as unknown as ReturnType<typeof setTimeout> | 0 });
   const optsRef = useRef(opts);
   useEffect(() => {
     optsRef.current = opts;
@@ -381,7 +385,10 @@ export function useAutosave(opts: {
       s.version = out.version;
     } catch (e) {
       s.saving = false;
-      if (!(e instanceof ApiError && e.isConflict)) return void setStatus(e instanceof ApiError && e.isOffline ? "offline" : "error");
+      if (!(e instanceof ApiError && e.isConflict)) {
+        saveDraft(optsRef.current.key, s.text);
+        return void setStatus(e instanceof ApiError && e.isOffline ? "offline" : "error");
+      }
       const cur = optsRef.current.fromConflict((e.details as { current?: unknown })?.current);
       if (cur.text === s.base || cur.text === sending) {
         // Only the version moved (another field changed), or they saved the same text: no real conflict.
@@ -395,6 +402,7 @@ export function useAutosave(opts: {
       return;
     }
     s.saving = false;
+    clearDraft(optsRef.current.key);
     setStatus("saved");
     if (dirty()) return doSave(); // typed while the request was out
   }, []);
@@ -422,6 +430,15 @@ export function useAutosave(opts: {
     if (choice === "theirs") setStatus("saved");
     else void doSave();
   };
+
+  // The registry lets the panel ask before closing over unsaved text; a restored draft saves at once.
+  useEffect(() => {
+    markUnsaved(key, text !== r.current.base || r.current.saving);
+  }, [key, text, status]);
+  useEffect(() => {
+    if (dirty()) void doSave();
+    return () => markUnsaved(key, false);
+  }, [key, doSave]);
 
   // Flush on unmount (panel closed) and warn before leaving with unsaved text.
   useEffect(() => {

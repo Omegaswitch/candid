@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { fmt, t } from "@/i18n";
 import { api, ApiError } from "@/lib/api";
+import { GoogleErrorNote } from "@/components/google/google-client";
 import { todayLocal } from "@/lib/dates";
 import type { ExportScope } from "@/lib/import/types";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export function ExportDialog({ open, onOpenChange, preset }: { open: boolean; on
   const [format, setFormat] = useState<Format>("xlsx");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<unknown>(null);
   const [googleOff, setGoogleOff] = useState(false);
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
 
@@ -43,10 +45,11 @@ export function ExportDialog({ open, onOpenChange, preset }: { open: boolean; on
   async function run() {
     setBusy(true);
     setError(null);
+    setGoogleError(null);
     setSheetUrl(null);
     try {
       if (format === "google") {
-        const r = await api<{ url: string }>(`/api/google/export?today=${todayLocal()}`, { method: "POST", json: { target: "new", scope: body } });
+        const r = await api<{ url: string }>(`/api/google/export?today=${todayLocal()}`, { method: "POST", json: { target: "new", ...body } });
         setSheetUrl(r.url);
         window.open(r.url, "_blank", "noopener");
         return;
@@ -75,6 +78,8 @@ export function ExportDialog({ open, onOpenChange, preset }: { open: boolean; on
         setGoogleOff(true);
         setFormat("xlsx");
         setError(null);
+      } else if (format === "google") {
+        setGoogleError(e); // shows Reconnect when the Google connection has lapsed
       } else {
         setError(e instanceof ApiError && e.isOffline ? t.common.offline : e instanceof Error ? e.message : s.failed);
       }
@@ -132,6 +137,7 @@ export function ExportDialog({ open, onOpenChange, preset }: { open: boolean; on
           ))}
         </fieldset>
 
+        {googleError != null && <GoogleErrorNote error={googleError} onRetry={run} />}
         {error && (
           <p role="alert" className="text-sm text-negative">
             {error}

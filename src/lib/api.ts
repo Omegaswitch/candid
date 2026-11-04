@@ -12,7 +12,7 @@ export class ApiError extends Error {
   }
   /** Network failure or offline: the change did not reach the server. */
   get isOffline() {
-    return this.status === 0;
+    return this.status === 0 && typeof navigator !== "undefined" && !navigator.onLine;
   }
 }
 

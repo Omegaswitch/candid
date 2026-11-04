@@ -8,7 +8,7 @@ import { ProjectSheet } from "@/components/projects/project-sheet";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMembers } from "@/hooks/queries";
+import { useCounts, useMembers } from "@/hooks/queries";
 import { type TaskViewItem, type TaskViewName, useTaskView, useToggleTask } from "@/hooks/projects";
 import { fmt, plural, t } from "@/i18n";
 import { ApiError } from "@/lib/api";
@@ -26,6 +26,7 @@ function groupOf(due: string | null, today: string): Group {
   return due <= addDaysIso(today, 7) ? "week" : "later";
 }
 const ORDER: Group[] = ["overdue", "today", "tomorrow", "week", "later", "none"];
+const COUNT_KEY = { mine: "mine", "due-soon": "dueThisWeek", overdue: "overdue", waiting: "waiting" } as const;
 
 /** One cross-project list: My tasks, Due soon, Overdue, Waiting. Rows grouped by due date. */
 export function TaskView({ view }: { view: TaskViewName }) {
@@ -36,18 +37,19 @@ export function TaskView({ view }: { view: TaskViewName }) {
   const today = todayLocal();
   const s = v[view];
 
+  const counts = useCounts();
+  const items = useMemo(() => q.data?.pages.flat(), [q.data]);
   const names = useMemo(() => new Map((members.data ?? []).map((m) => [m.id, m.name])), [members.data]);
   const groups = useMemo(() => {
     const map = new Map<Group, TaskViewItem[]>();
-    for (const it of q.data ?? []) {
+    for (const it of items ?? []) {
       const g = groupOf(it.task.dueDate, today);
       map.set(g, [...(map.get(g) ?? []), it]);
     }
     return ORDER.filter((g) => map.has(g)).map((g) => ({ g, items: map.get(g)! }));
-  }, [q.data, today]);
+  }, [items, today]);
 
   const subline = useMemo(() => {
-    const items = q.data;
     if (!items?.length) return null;
     const open = items.filter((i) => !i.task.done);
     const tasks = plural(open.length, v.tasksN);
@@ -55,7 +57,7 @@ export function TaskView({ view }: { view: TaskViewName }) {
     const projects = plural(new Set(open.map((i) => i.project.id)).size, v.projectsN);
     if (view === "overdue") return fmt(s.subline, { tasks, projects });
     return fmt(overdue ? s.subline : s.sublineNone, { tasks, overdue: plural(overdue, v.tasksN) });
-  }, [q.data, today, view, s]);
+  }, [items, today, view, s]);
 
   const setDone = (it: TaskViewItem, done: boolean, version = it.task.version) => {
     const title = it.task.title;
@@ -89,17 +91,24 @@ export function TaskView({ view }: { view: TaskViewName }) {
           </Button>
         </div>
       ) : q.isPending ? (
-        <div className="rounded-lg border bg-card">
-          {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="flex h-14 items-center gap-3 border-b px-4 last:border-0">
-              <Skeleton className="size-4" />
-              <div className="flex-1 space-y-1.5">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-3 w-1/4" />
+        <div aria-busy aria-label={t.common.loading}>
+          <div className="mb-2 flex h-4 items-center"><Skeleton className="h-3 w-16" /></div>
+          <div className="rounded-lg border bg-card">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="flex h-14 items-center gap-3 border-b px-4 last:border-0">
+                <Skeleton className="size-[18px]" />
+                <div className="flex flex-1 flex-col gap-1">
+                  <div className="flex h-5 items-center"><Skeleton className="h-3.5 w-1/2" /></div>
+                  <div className="flex h-4 items-center"><Skeleton className="h-3 w-1/4" /></div>
+                </div>
+                <div className="hidden w-40 items-center gap-2 sm:flex">
+                  <Skeleton className="size-6 rounded-full" />
+                  <Skeleton className="h-3.5 w-24" />
+                </div>
+                <Skeleton className="h-3.5 w-16 sm:w-20" />
               </div>
-              <Skeleton className="h-4 w-16" />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       ) : groups.length === 0 ? (
         <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">{s.empty}</div>
@@ -128,6 +137,17 @@ export function TaskView({ view }: { view: TaskViewName }) {
               </ul>
             </section>
           ))}
+        </div>
+      )}
+
+      {q.hasNextPage && (
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <Button variant="outline" size="sm" onClick={() => q.fetchNextPage()} disabled={q.isFetchingNextPage}>
+            {v.loadMore}
+          </Button>
+          <span className="num">
+            {fmt(v.shown, { shown: items?.length ?? 0, total: counts.data?.[COUNT_KEY[view]] ?? "…" })}
+          </span>
         </div>
       )}
 

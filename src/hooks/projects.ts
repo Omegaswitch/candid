@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fmt, t } from "@/i18n";
 import { api, ApiError } from "@/lib/api";
@@ -24,10 +24,17 @@ export type TaskViewItem = {
   project: { id: string; name: string; client: string | null; priority: "normal" | "high" };
 };
 
+const TASK_PAGE = 200;
+type TaskPages = InfiniteData<TaskViewItem[]>;
+
+/** Paged: 200 rows at a time, "Load more" appends the next page. */
 export function useTaskView(view: TaskViewName) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: qk.taskView(view),
-    queryFn: () => api<{ items: TaskViewItem[] }>(`/api/tasks?view=${view}&today=${todayLocal()}`).then((r) => r.items),
+    queryFn: ({ pageParam }) =>
+      api<{ items: TaskViewItem[] }>(`/api/tasks?view=${view}&today=${todayLocal()}&limit=${TASK_PAGE}&offset=${pageParam}`).then((r) => r.items),
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => (last.length === TASK_PAGE ? pages.flat().length : undefined),
   });
 }
 
@@ -173,15 +180,15 @@ export function useCreateProject() {
 export function useToggleTask() {
   const qc = useQueryClient();
   const patchViews = (id: string, patch: Partial<TaskViewItem["task"]>) =>
-    qc.setQueriesData<TaskViewItem[]>({ queryKey: ["tasks"] }, (items) =>
-      items?.map((it) => (it.task.id === id ? { ...it, task: { ...it.task, ...patch } } : it)),
+    qc.setQueriesData<TaskPages>({ queryKey: ["tasks"] }, (data) =>
+      data && { ...data, pages: data.pages.map((items) => items.map((it) => (it.task.id === id ? { ...it, task: { ...it.task, ...patch } } : it))) },
     );
   return useMutation({
     mutationFn: ({ id, done, version }: { id: string; done: boolean; version: number; title: string }) =>
       api<{ task: TaskViewItem["task"] }>(`/api/tasks/${id}`, { method: "PATCH", json: { done, version } }).then((r) => r.task),
     onMutate: async ({ id, done }) => {
       await qc.cancelQueries({ queryKey: ["tasks"] });
-      const snapshot = qc.getQueriesData<TaskViewItem[]>({ queryKey: ["tasks"] });
+      const snapshot = qc.getQueriesData<TaskPages>({ queryKey: ["tasks"] });
       patchViews(id, { done });
       return { snapshot };
     },
@@ -194,8 +201,8 @@ export function useToggleTask() {
       qc.invalidateQueries({ queryKey: qk.counts() });
       qc.invalidateQueries({ queryKey: qk.projects() });
       const projectId = qc
-        .getQueriesData<TaskViewItem[]>({ queryKey: ["tasks"] })
-        .flatMap(([, d]) => d ?? [])
+        .getQueriesData<TaskPages>({ queryKey: ["tasks"] })
+        .flatMap(([, d]) => d?.pages.flat() ?? [])
         .find((it) => it.task.id === id)?.task.projectId;
       if (projectId) qc.invalidateQueries({ queryKey: qk.project(projectId) });
     },

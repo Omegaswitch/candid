@@ -24,6 +24,8 @@ export const views = {
     sublineNone: "{tasks} waiting on someone else.",
     empty: "Nothing is waiting on someone else.",
   },
+  loadMore: "Load more",
+  shown: "{shown} of {total} shown",
   tasksN: { one: "{n} task", other: "{n} tasks" },
   projectsN: { one: "{n} project", other: "{n} projects" },
   groups: { overdue: "Overdue", today: "Today", tomorrow: "Tomorrow", week: "Next 7 days", later: "Later", none: "No due date" },
