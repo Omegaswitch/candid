@@ -40,12 +40,23 @@ export function decodeText(bytes: Uint8Array): string {
 
 const stripBom = (s: string) => (s.charCodeAt(0) === 0xfeff ? s.slice(1) : s);
 
+/** , ; or tab: the one that splits the first lines into the same number (> 1) of columns. */
+export function detectDelimiter(text: string): string {
+  let best = ",";
+  let bestScore = 0;
+  for (const d of [",", ";", "\t"]) {
+    const rows = Papa.parse<string[]>(text, { delimiter: d, preview: 20, skipEmptyLines: true }).data;
+    const width = rows[0]?.length ?? 0;
+    if (width < 2) continue;
+    const score = rows.filter((r) => r.length === width).length * 1000 + width;
+    if (score > bestScore) [best, bestScore] = [d, score];
+  }
+  return best;
+}
+
 function parseDelimited(text: string, delimiter?: string): Cell[][] {
-  const res = Papa.parse<string[]>(stripBom(text), {
-    delimiter: delimiter ?? "",
-    delimitersToGuess: [",", ";", "\t"],
-    skipEmptyLines: false,
-  });
+  const clean = stripBom(text);
+  const res = Papa.parse<string[]>(clean, { delimiter: delimiter ?? detectDelimiter(clean), skipEmptyLines: false });
   return trimRows(res.data.map((r) => r.map(emptyToNull)));
 }
 

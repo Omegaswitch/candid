@@ -87,7 +87,6 @@ export type IssueCode =
   | "invalidDate"
   | "ambiguousDate"
   | "invalidBoolean"
-  | "invalidEmail"
   | "unknownEmail"
   | "unknownEmailKept"
   | "formula"

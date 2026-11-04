@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { integrationConnections } from "@/db/schema";
+import { unescapeCell } from "@/lib/import/escape";
 import type { Cell, ExportBundle, ExportTable, ParsedWorkbook } from "@/lib/import/types";
 import { logActivity } from "./activity";
 import type { Ctx } from "./context";
@@ -376,7 +377,9 @@ const toCell = (v: unknown): Cell => (typeof v === "string" || typeof v === "num
 
 export type ExportTarget = { target: "new" } | { target: "existing"; spreadsheet: string; sheetTitle?: string };
 
-const tableValues = (t: ExportTable) => [t.header, ...t.rows.map((r) => r.map((v) => v ?? ""))];
+// The bundle prefixes risky text with ' for CSV/XLSX. RAW already stores text as text, and would keep
+// that quote visibly, so it is removed here: the sheet shows exactly what the user typed.
+const tableValues = (t: ExportTable) => [t.header, ...t.rows.map((r) => r.map((v) => (typeof v === "string" ? unescapeCell(v) : (v ?? ""))))];
 const grid = (t: ExportTable) => ({ rowCount: Math.max(t.rows.length + 1, 2), columnCount: Math.max(t.header.length, 1) });
 
 /** Picks titles not already used in the spreadsheet: "Projects 2026-11-04", then "… (2)". */

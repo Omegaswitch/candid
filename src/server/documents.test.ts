@@ -1,13 +1,11 @@
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.hoisted(() => {
+await vi.hoisted(async () => {
+  const [{ mkdtemp }, { tmpdir }, { join }] = await Promise.all([import("node:fs/promises"), import("node:os"), import("node:path")]);
   process.env.STORAGE_DRIVER = "local";
-  process.env.LOCAL_STORAGE_DIR = require("node:fs").mkdtempSync(require("node:path").join(require("node:os").tmpdir(), "candid-docs-"));
+  process.env.LOCAL_STORAGE_DIR = await mkdtemp(join(tmpdir(), "candid-docs-"));
   process.env.TOKEN_ENCRYPTION_KEY ||= "test-key";
 });
 const auth = vi.hoisted(() => ({ userId: null as string | null }));
@@ -35,10 +33,6 @@ import {
 } from "./documents";
 import { contentDisposition, localPut, storage, verifyLocalToken } from "./storage";
 import { GET as downloadRoute } from "@/app/api/documents/[id]/download/route";
-
-void mkdtempSync;
-void tmpdir;
-void join;
 
 const PDF = new TextEncoder().encode("%PDF-1.7\n1 0 obj\n");
 const EXE = new Uint8Array([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);

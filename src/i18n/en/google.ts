@@ -1,2 +1,45 @@
-// Filled by the feature that owns this namespace. Keep keys in sentence case; {name} placeholders go through fmt().
-export const google = {};
+// Google connection and Sheets picker. Keep keys in sentence case; {name} placeholders go through fmt().
+export const google = {
+  connect: "Connect Google",
+  reconnect: "Reconnect Google",
+  disconnect: "Disconnect",
+  disconnecting: "Disconnecting…",
+  disconnected: "Google disconnected",
+  connectedToast: "Google connected",
+  status: "Status",
+  account: "Connected account",
+  lastError: "Last problem",
+  statusConnected: "Connected",
+  statusNotConnected: "Not connected",
+  statusRevoked: "Needs reconnecting",
+  revokedNote: "Google stopped accepting this connection (access was revoked, the password changed, or it expired). Reconnect to keep importing and exporting.",
+  notConnectedNote: "Connect your Google account to import from and export to Google Sheets.",
+  notConfigured: "Google is not set up yet. An admin needs to add the Google OAuth credentials (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_URL) on the server.",
+  loadError: "Could not load the Google connection status.",
+  disconnectTitle: "Disconnect Google?",
+  disconnectBody: "Candid revokes its access at Google and deletes the stored tokens. Spreadsheets already exported stay in your Google account.",
+  callbackErrors: {
+    state: "The Google sign-in could not be verified (it expired or was started in another browser). Try connecting again.",
+    denied: "Google access was not granted.",
+    exchange: "Google did not complete the connection. Try again.",
+    scope: "Candid needs access to Google Sheets. Connect again and leave the Sheets permission ticked.",
+    not_configured: "Google is not set up yet. An admin needs to add the Google OAuth credentials.",
+  } as Record<string, string>,
+
+  picker: {
+    title: "Google spreadsheet",
+    spreadsheet: "Spreadsheet link or ID",
+    spreadsheetHint: "Open the spreadsheet in Google Sheets and copy the address from the browser.",
+    placeholder: "https://docs.google.com/spreadsheets/d/…",
+    inspect: "Open spreadsheet",
+    inspecting: "Opening…",
+    worksheets: "Worksheets to import",
+    rows: { one: "up to {n} row", other: "up to {n} rows" },
+    load: "Load worksheets",
+    loading: "Reading values from Google…",
+    pickOne: "Pick at least one worksheet",
+    change: "Use another spreadsheet",
+    noSheets: "This spreadsheet has no worksheets with cells.",
+    connectedAs: "Connected as {email}",
+  },
+};

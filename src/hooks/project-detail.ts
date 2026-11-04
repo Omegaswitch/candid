@@ -293,6 +293,32 @@ export function useProjectActions(projectId: string) {
   return { save, conflict, dismissConflict: () => setConflict(null), pin, archive, duplicate };
 }
 
+// ---- notes saves (fed to useAutosave) -----------------------------------------------------
+
+export function useProjectNotesSave(projectId: string) {
+  const qc = useQueryClient();
+  return (notes: string, notesVersion: number) =>
+    api<{ notes: string; notesVersion: number; updatedAt: string }>(`/api/projects/${projectId}/notes`, { method: "PUT", json: { notes, notesVersion } }).then((r) => {
+      setDetail(qc, projectId, (d) => ({ ...d, project: { ...d.project, notes: r.notes, notesVersion: r.notesVersion, updatedAt: r.updatedAt } }));
+      qc.invalidateQueries({ queryKey: qk.activity(projectId) });
+      return { text: r.notes, version: r.notesVersion, savedAt: r.updatedAt };
+    });
+}
+
+/** Task notes share the task's version, so they queue behind the panel's other task writes. */
+export function useTaskNoteSave(projectId: string) {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationKey: mutationKeyOf(projectId),
+    scope: scopeOf(projectId),
+    mutationFn: ({ taskId, note, version }: { taskId: string; note: string; version: number }) =>
+      api<{ task: TaskRow }>(`/api/tasks/${taskId}`, { method: "PATCH", json: { note, version } }).then((r) => r.task),
+    onSuccess: (task) => setTask(qc, projectId, task.id, (x) => ({ ...x, note: task.note, version: task.version, updatedAt: task.updatedAt })),
+  });
+  return (taskId: string, note: string, version: number) =>
+    m.mutateAsync({ taskId, note, version }).then((x) => ({ text: x.note, version: x.version, savedAt: x.updatedAt }));
+}
+
 // ---- autosave ------------------------------------------------------------------------------
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error" | "offline";

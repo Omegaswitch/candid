@@ -9,7 +9,7 @@ import { AppError, notFound } from "./errors";
 import type { MemberSummary } from "./members";
 
 export const inviteInput = z.object({
-  email: z.email("Enter a valid email address").trim().toLowerCase(),
+  email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address")),
   role: z.enum(["admin", "member"]).default("member"),
 });
 export const roleInput = z.object({ role: z.enum(["admin", "member"]) });
