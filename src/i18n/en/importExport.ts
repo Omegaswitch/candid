@@ -112,6 +112,8 @@ export const importExport = {
     empty: "—",
     issuesTitle: "Issues",
     noIssues: "No issues found.",
+    showMore: { one: "Show {n} more project", other: "Show {n} more projects" },
+    changedTo: "changes to",
   },
 
   confirm: {

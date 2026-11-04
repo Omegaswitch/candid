@@ -69,10 +69,12 @@ export function useRemoveDocument() {
       toast(fmt(s.removed, { name: d.name }), {
         action: {
           label: t.common.undo,
-          onClick: () =>
+          onClick: () => {
+            patchCache(qc, (l) => [...l.filter((x) => x.id !== d.id), d].sort((a, b) => a.position - b.position || b.createdAt.localeCompare(a.createdAt)));
             api(`/api/documents/${d.id}/restore`, { method: "POST" })
               .catch((e) => toast.error(errorText(e)))
-              .finally(() => qc.invalidateQueries({ queryKey: qk.documents() })),
+              .finally(() => qc.invalidateQueries({ queryKey: qk.documents() }));
+          },
         },
       });
     },

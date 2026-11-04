@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, Copy, Link2, MoreHorizontal, Pin, PinOff, X } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, Link2, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { toast } from "sonner";
@@ -125,7 +125,7 @@ function Field({ label, htmlFor, children }: { label: string; htmlFor: string; c
   );
 }
 
-export function PanelHeader({ data, actions, onClose }: { data: ProjectDetail; actions: Actions; onClose: () => void }) {
+export function PanelHeader({ data, actions }: { data: ProjectDetail; actions: Actions }) {
   const id = useId();
   const pr = data.project;
   const save = (patch: ProjectPatch) => actions.save(patch);
@@ -133,7 +133,7 @@ export function PanelHeader({ data, actions, onClose }: { data: ProjectDetail; a
 
   return (
     <header className="grid gap-4">
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2 pr-10">
         <div className="grid min-w-0 flex-1 gap-1">
           <h2 className="text-lg leading-snug font-semibold break-words">
             <InlineText value={pr.name} onSave={(name) => save({ name })} label={p.nameLabel} editLabel={`${p.editName}: ${pr.name}`} inputClassName="text-lg font-semibold">
@@ -156,9 +156,6 @@ export function PanelHeader({ data, actions, onClose }: { data: ProjectDetail; a
         </div>
         <div className="flex flex-none items-center gap-0.5">
           <ProjectMenu data={data} actions={actions} />
-          <Button variant="ghost" size="icon" aria-label={p.close} onClick={onClose}>
-            <X aria-hidden />
-          </Button>
         </div>
       </div>
 

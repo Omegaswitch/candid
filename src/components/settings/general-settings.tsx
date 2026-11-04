@@ -1,26 +1,27 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useSession } from "@/components/app/session";
 import { t } from "@/i18n";
 import { formatInstant } from "@/lib/dates";
 import { Field, PageTitle, SettingsSection } from "./settings-section";
 
 const g = t.settings.general;
+const noop = () => () => {};
 
 export function GeneralSettings() {
   const session = useSession();
   const { theme } = useTheme();
-  // Browser-only values: read after mount so server and client render the same first frame.
-  const [local, setLocal] = useState<{ zone: string; now: string; theme: string } | null>(null);
-  useEffect(() => {
-    setLocal({
-      zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      now: formatInstant(new Date()),
-      theme: t.common.theme[(theme ?? "system") as "light" | "dark" | "system"] ?? t.common.theme.system,
-    });
-  }, [theme]);
+  // Browser-only values: false on the server and during hydration, so both render the same first frame.
+  const mounted = useSyncExternalStore(noop, () => true, () => false);
+  const local = mounted
+    ? {
+        zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        now: formatInstant(new Date()),
+        theme: t.common.theme[(theme ?? "system") as "light" | "dark" | "system"] ?? t.common.theme.system,
+      }
+    : null;
 
   return (
     <>

@@ -28,7 +28,7 @@ export default function PreviewDialog({ doc, onClose }: { doc: DocumentDto | nul
               <iframe src={downloadHref(doc, true)} title={doc.name} className="h-[70vh] w-full rounded-md border bg-muted" />
             ) : canPreview ? (
               // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not an optimisable asset
-              <img src={downloadHref(doc, true)} alt={doc.name} className="max-h-[70vh] w-full rounded-md border bg-muted object-contain" />
+              <img src={downloadHref(doc, true)} alt={doc.name} className="mx-auto max-h-[70vh] max-w-full rounded-md border object-contain" />
             ) : (
               <p className="text-muted-foreground">{s.preview.noPreview}</p>
             )}
