@@ -1,14 +1,14 @@
 import type { NextConfig } from "next";
 
-// Clerk loads from its Frontend API and its own CDN; Google is only reached server-side.
+// Clerk loads from its Frontend API (production: clerk.candid.quest) and its own CDN; Google is only reached server-side.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.com:* https://challenges.cloudflare.com`,
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.com:* https://*.candid.quest https://challenges.cloudflare.com`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://img.clerk.com https://*.clerk.com",
+  "img-src 'self' data: blob: https://img.clerk.com https://*.clerk.com https://*.candid.quest",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.com:* https://*.r2.cloudflarestorage.com https://*.amazonaws.com",
-  "frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.com:* https://*.candid.quest https://*.r2.cloudflarestorage.com https://*.amazonaws.com",
+  "frame-src 'self' https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com https://*.candid.quest",
   "worker-src 'self' blob:",
   "form-action 'self' https://*.r2.cloudflarestorage.com https://*.amazonaws.com",
   "frame-ancestors 'self'",
