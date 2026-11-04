@@ -167,7 +167,7 @@ export function TaskRow({
             <GripVertical aria-hidden className="size-3.5" />
           </button>
         )}
-        <span className="flex h-11 w-8 flex-none items-center justify-center">
+        <span className="flex h-8 w-8 flex-none items-center justify-center">
           {selecting ? (
             <Checkbox checked={selected} onCheckedChange={(v) => onSelect(v === true)} aria-label={fmt(t.tasks.selectTask, title)} />
           ) : (
@@ -183,7 +183,7 @@ export function TaskRow({
                 fillColor="var(--positive)"
                 checkColor="var(--primary-foreground)"
                 ariaLabel={fmt(task.done ? t.tasks.reopen : t.tasks.complete, title)}
-                className="gap-0"
+                className="-my-1.5 gap-0"
               />
             </ClickSpark>
           )}
