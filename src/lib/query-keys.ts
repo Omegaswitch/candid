@@ -8,6 +8,7 @@ export const qk = {
   taskView: (view: string) => ["tasks", view] as const,
   documents: () => ["documents"] as const,
   templates: () => ["templates"] as const,
+  search: (q: string) => ["search", q] as const,
   activity: (projectId: string) => ["activity", projectId] as const,
 };
 

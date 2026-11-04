@@ -4,6 +4,7 @@ import { google } from "./en/google";
 import { importExport } from "./en/importExport";
 import { nav } from "./en/nav";
 import { projects } from "./en/projects";
+import { search } from "./en/search";
 import { settings } from "./en/settings";
 import { tasks } from "./en/tasks";
 import { views } from "./en/views";
@@ -12,7 +13,7 @@ import { views } from "./en/views";
  * Every user-facing string lives under src/i18n/en/<namespace>.ts. A Czech locale is a
  * `cs` object of the same shape (`Strings`), selected here.
  */
-export const en = { common, nav, projects, tasks, documents, importExport, google, settings, views };
+export const en = { common, nav, projects, tasks, documents, importExport, google, settings, views, search };
 export type Strings = typeof en;
 export const t: Strings = en;
 export const locale = "en";
