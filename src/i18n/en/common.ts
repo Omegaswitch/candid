@@ -19,6 +19,8 @@ export const common = {
   unsavedLeave: "You have unsaved changes. Leave anyway?",
   errorGeneric: "Something went wrong. Try again.",
   signIn: "Sign in",
+  signInDegraded: "Sign-in is running slowly right now. If the form does not appear, reload the page.",
+  signInFailed: "The sign-in form could not load. Something on your network or in your browser is blocking clerk.com — try another browser or network, or ask your IT team to allow clerk.com and clerk.accounts.dev.",
   signOut: "Sign out",
   devSignInTitle: "Development sign-in",
   devSignInNote: "Local stand-in for Clerk. Disabled on deployments.",
