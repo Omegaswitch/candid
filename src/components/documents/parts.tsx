@@ -1,6 +1,6 @@
 "use client";
 
-import { FileImage, FileSpreadsheet, FileText, Link2, MoreHorizontal, Pin, PinOff, Plus, Trash2, Upload } from "lucide-react";
+import { FileImage, FileSpreadsheet, FileText, Link2, MoreHorizontal, Pencil, Pin, PinOff, Plus, Trash2, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { fmt, t } from "@/i18n";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ACCEPT } from "./file-types";
-import { useAddLink, usePinDocument, useRemoveDocument, useUpload, type DocumentDto } from "./use-documents";
+import { useAddLink, usePinDocument, useRemoveDocument, useUpdateDocument, useUpload, type DocumentDto } from "./use-documents";
 
 const s = t.documents;
 
@@ -188,7 +188,41 @@ export function DocLink({ doc, onPreview, className, children }: { doc: Document
 export function DocRowMenu({ doc }: { doc: DocumentDto }) {
   const remove = useRemoveDocument();
   const pin = usePinDocument();
+  const update = useUpdateDocument();
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(doc.name);
+  const save = () => {
+    const v = name.trim();
+    if (v && v !== doc.name) update.mutate({ id: doc.id, version: doc.version, name: v });
+    setRenaming(false);
+  };
   return (
+    <>
+    <Dialog open={renaming} onOpenChange={setRenaming}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t.documents.actions.rename}</DialogTitle>
+          <DialogDescription className="truncate">{doc.name}</DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+          className="grid gap-4"
+        >
+          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label={t.documents.actions.rename} maxLength={200} />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRenaming(false)}>
+              {t.common.cancel}
+            </Button>
+            <Button type="submit" disabled={!name.trim()}>
+              {t.common.save}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -201,6 +235,15 @@ export function DocRowMenu({ doc }: { doc: DocumentDto }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem
+          onSelect={() => {
+            setName(doc.name);
+            setRenaming(true);
+          }}
+        >
+          <Pencil aria-hidden />
+          {t.documents.actions.rename}
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => pin.mutate({ id: doc.id, pinned: !doc.pinned })}>
           {doc.pinned ? <PinOff aria-hidden /> : <Pin aria-hidden />}
           {doc.pinned ? t.documents.actions.unpin : t.documents.actions.pin}
@@ -211,5 +254,6 @@ export function DocRowMenu({ doc }: { doc: DocumentDto }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </>
   );
 }
