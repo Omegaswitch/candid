@@ -1,6 +1,9 @@
 // Filled by the feature that owns this namespace. Keep keys in sentence case; {name} placeholders go through fmt().
 export const documents = {
   title: "Documents",
+  shelfGeneral: "General",
+  shelfByProject: "By project",
+  shelfNone: "None yet.",
   shelfLabel: "Documents",
   shelfRegion: "Document shelf",
   viewAll: "View all",

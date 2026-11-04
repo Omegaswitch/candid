@@ -19,8 +19,26 @@ export function DocumentShelf() {
   const [dragging, setDragging] = useState(false);
 
   const all = docs.data ?? [];
-  const pinned = all.filter((d) => d.pinned);
-  const shown = (pinned.length ? pinned : [...all].sort((a, b) => b.createdAt.localeCompare(a.createdAt))).slice(0, SHELF_SIZE);
+  // Pinned first, then newest; each block shows a handful, "View all" has the rest.
+  const pick = (list: DocumentDto[]) =>
+    [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.createdAt.localeCompare(a.createdAt)).slice(0, SHELF_SIZE);
+  const general = pick(all.filter((d) => !d.projectId));
+  const byProject = pick(all.filter((d) => d.projectId));
+  const row = (d: DocumentDto) => (
+    <li key={d.id}>
+      <DocLink
+        doc={d}
+        onPreview={setPreview}
+        className="flex min-h-8 items-center gap-2.5 rounded-md px-2.5 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+      >
+        <DocIcon doc={d} />
+        <span className="grid min-w-0">
+          {d.projectName && <span className="truncate text-[11px] leading-tight text-muted-foreground/90">{d.projectName}</span>}
+          <span className="truncate">{d.name}</span>
+        </span>
+      </DocLink>
+    </li>
+  );
 
   return (
     <section
@@ -64,28 +82,20 @@ export function DocumentShelf() {
             {t.common.retry}
           </button>
         </p>
-      ) : shown.length === 0 ? (
+      ) : all.length === 0 ? (
         <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfEmpty}</p>
       ) : (
-        <ul className="flex flex-col gap-0.5">
-          {shown.map((d) => (
-            <li key={d.id}>
-              <DocLink
-                doc={d}
-                onPreview={setPreview}
-                className="flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
-              >
-                <DocIcon doc={d} />
-                <span className="truncate">{d.name}</span>
-              </DocLink>
-            </li>
-          ))}
-        </ul>
+        <>
+          <h3 className="mt-1 px-2.5 text-[11px] text-muted-foreground">{s.shelfGeneral}</h3>
+          {general.length ? <ul className="flex flex-col gap-0.5">{general.map(row)}</ul> : <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfNone}</p>}
+          <h3 className="mt-2 px-2.5 text-[11px] text-muted-foreground">{s.shelfByProject}</h3>
+          {byProject.length ? <ul className="flex flex-col gap-0.5">{byProject.map(row)}</ul> : <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfNone}</p>}
+        </>
       )}
       <Link href="/documents" className="flex h-7 items-center rounded-md px-2.5 text-xs text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground">
         {s.viewAll}
       </Link>
-      {preview && <DocumentPreview doc={preview} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreview doc={preview} docs={all} onClose={() => setPreview(null)} />}
     </section>
   );
 }

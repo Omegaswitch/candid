@@ -2,6 +2,9 @@ import type { Localized } from "./types";
 
 export const documents: Localized<typeof import("../en/documents").documents> = {
   title: "Dokumenty",
+  shelfGeneral: "Obecné",
+  shelfByProject: "Podle projektu",
+  shelfNone: "Zatím žádné.",
   shelfLabel: "Dokumenty",
   shelfRegion: "Police s\u00a0dokumenty",
   viewAll: "Zobrazit vše",
