@@ -124,9 +124,9 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
   archive: {
     delete: "Smazat",
     deleteTitle: "Trvale smazat „{name}“?",
-    deleteBody: "Projekt, jeho kontrolní seznam, poznámky a historie budou odstraněny pro všechny. Tuto akci nelze vrátit. Dokumenty zůstanou v\u00a0knihovně dokumentů.",
+    deleteBody: "Projekt, jeho kontrolní seznam, poznámky a\u00a0historie budou odstraněny pro všechny. Tuto akci nelze vrátit. Dokumenty zůstanou v\u00a0knihovně dokumentů.",
     deleteConfirm: "Trvale smazat",
-    deleted: "„{name}“ byl smazán.",
+    deleted: "Smazáno: „{name}“",
     title: "Archiv",
     subline: "Archivováno: {n}, od nejnovějších. Obnovený projekt se vrátí do Všech projektů.",
     sublineEmpty: "Archivované projekty se ukládají sem a\u00a0lze je obnovit.",

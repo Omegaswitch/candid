@@ -27,11 +27,13 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommandDialog, Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { fmt } from "@/i18n";
-import { search as s } from "@/i18n/en/search";
+import { fmt, t } from "@/i18n";
 import { api } from "@/lib/api";
 import { isTypingTarget } from "@/lib/keyboard";
 import type { SearchResults } from "@/server/search";
+
+// A lazy view of the active locale (see src/i18n/index.ts), safe at module level.
+const s = t.search;
 
 type Entry = { id: string; label: string; icon: LucideIcon; run: (go: (href: string) => void, setTheme: (t: string) => void) => void };
 
