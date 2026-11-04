@@ -91,7 +91,7 @@ export const tasks: Localized<typeof import("../en/tasks").tasks> = {
   waitingFor: "Čeká se na",
   waitingReasonPlaceholder: "Na koho nebo na co (nepovinné)",
   overdue: "Po termínu",
-  dueOn: "Termín {date}",
+  dueOn: "Do {date}",
   select: "Vybrat",
   selectTask: "Vybrat „{title}“",
   doneSelecting: "Hotovo",
