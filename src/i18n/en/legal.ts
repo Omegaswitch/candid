@@ -57,7 +57,7 @@ export const legal = {
     retention: {
       title: "How long data is kept",
       items: [
-        "Projects are never deleted from the app: they are archived and can be restored, so their tasks, notes and history stay. A removed task is hidden rather than erased, so it can be restored.",
+        "An archived project can be restored at any time. A project is only erased when someone deletes it from the Archive: its tasks, notes and history are then removed permanently. A removed task is hidden rather than erased, so it can be restored.",
         "Documents are kept until someone removes them. A removed document is purged from storage 7 days later.",
         "The activity log is kept for as long as the workspace exists.",
         "Google tokens are deleted when you disconnect Google or when an admin removes you from the workspace.",

@@ -60,7 +60,7 @@ export const legal: Localized<typeof en> = {
     retention: {
       title: "Jak dlouho se údaje uchovávají",
       items: [
-        "Projekty se z\u00a0aplikace nikdy nemažou: archivují se a\u00a0lze je obnovit, takže jejich úkoly, poznámky a\u00a0historie zůstávají. Odebraný úkol se jen skryje, nesmaže, takže ho lze obnovit.",
+        "Archivovaný projekt lze kdykoli obnovit. Projekt se smaže jen tehdy, když ho někdo smaže z\u00a0archivu: jeho úkoly, poznámky a\u00a0historie se pak odstraní natrvalo. Odebraný úkol se jen skryje, nesmaže, takže ho lze obnovit.",
         "Dokumenty se uchovávají, dokud je někdo neodebere. Odebraný dokument se z\u00a0úložiště trvale odstraní po 7 dnech.",
         "Záznam aktivity se uchovává po celou dobu existence pracovního prostoru.",
         "Tokeny Google se smažou, když Google odpojíte nebo když vás správce z\u00a0pracovního prostoru odebere.",
