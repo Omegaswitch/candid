@@ -19,6 +19,7 @@ export const nav = {
   expandSidebar: "Expand sidebar",
   userMenu: "Account",
   userMenuLabel: "{initials}: account menu for {name}",
+  help: "Help",
   privacy: "Privacy notice",
   skipToContent: "Skip to content",
 };

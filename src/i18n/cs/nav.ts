@@ -21,6 +21,7 @@ export const nav: Localized<typeof import("../en/nav").nav> = {
   expandSidebar: "Rozbalit postranní panel",
   userMenu: "Účet",
   userMenuLabel: "{initials}: nabídka účtu pro {name}",
+  help: "Nápověda",
   privacy: "Ochrana osobních údajů",
   skipToContent: "Přeskočit na obsah",
 };

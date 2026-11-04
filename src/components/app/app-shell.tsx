@@ -4,6 +4,7 @@ import {
   Archive,
   CalendarClock,
   CircleAlert,
+  CircleHelp,
   FolderKanban,
   Hourglass,
   ListChecks,
@@ -114,6 +115,7 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
         </>
       )}
       <div className="mt-auto flex flex-col gap-0.5">
+        <NavLink item={{ href: "/help", get label() { return t.nav.help; }, icon: CircleHelp }} collapsed={collapsed} onNavigate={onNavigate} />
         <NavLink item={{ href: "/settings", get label() { return t.nav.settings; }, icon: Settings }} collapsed={collapsed} onNavigate={onNavigate} />
       </div>
     </div>
