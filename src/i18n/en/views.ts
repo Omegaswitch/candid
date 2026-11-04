@@ -1,2 +1,42 @@
-// Filled by the feature that owns this namespace. Keep keys in sentence case; {name} placeholders go through fmt().
-export const views = {};
+// Strings for the cross-project task views. Keep keys in sentence case; {name} placeholders go through fmt().
+export const views = {
+  mine: {
+    title: "My tasks",
+    subline: "{tasks} assigned to you, {overdue} overdue.",
+    sublineNone: "{tasks} assigned to you.",
+    empty: "Nothing is assigned to you.",
+  },
+  "due-soon": {
+    title: "Due soon",
+    subline: "{tasks} due in the next 7 days.",
+    sublineNone: "{tasks} due in the next 7 days.",
+    empty: "Nothing is due in the next 7 days.",
+  },
+  overdue: {
+    title: "Overdue",
+    subline: "{tasks} past their due date across {projects}.",
+    sublineNone: "{tasks} past their due date.",
+    empty: "Nothing is overdue.",
+  },
+  waiting: {
+    title: "Waiting",
+    subline: "{tasks} waiting on someone else, {overdue} overdue.",
+    sublineNone: "{tasks} waiting on someone else.",
+    empty: "Nothing is waiting on someone else.",
+  },
+  tasksN: { one: "{n} task", other: "{n} tasks" },
+  projectsN: { one: "{n} project", other: "{n} projects" },
+  groups: { overdue: "Overdue", today: "Today", tomorrow: "Tomorrow", week: "Next 7 days", later: "Later", none: "No due date" },
+  complete: "Complete {title}",
+  completed: "Completed {title}",
+  reopened: "Reopened {title}",
+  couldNotComplete: "Could not update {title}",
+  changedElsewhere: "{title} was changed by someone else. The list is refreshed.",
+  openProject: "Open {name}",
+  unassigned: "Unassigned",
+  waitingFor: "Waiting: {reason}",
+  waitingNoReason: "Waiting",
+  noDue: "No date",
+  loadError: "Could not load tasks.",
+  columns: { task: "Task", project: "Project", assignee: "Assignee", due: "Due" },
+};
