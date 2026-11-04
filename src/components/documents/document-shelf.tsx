@@ -88,7 +88,8 @@ export function DocumentShelf() {
         <>
           <h3 className="mt-1 px-2.5 text-[11px] text-muted-foreground">{s.shelfGeneral}</h3>
           {general.length ? <ul className="flex flex-col gap-0.5">{general.map(row)}</ul> : <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfNone}</p>}
-          <h3 className="mt-2 px-2.5 text-[11px] text-muted-foreground">{s.shelfByProject}</h3>
+          <hr className="mx-2.5 my-2 border-sidebar-border" />
+          <h3 className="px-2.5 text-[11px] text-muted-foreground">{s.shelfByProject}</h3>
           {byProject.length ? <ul className="flex flex-col gap-0.5">{byProject.map(row)}</ul> : <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfNone}</p>}
         </>
       )}
