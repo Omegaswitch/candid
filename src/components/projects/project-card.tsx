@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { fmt, t } from "@/i18n";
+import { daysBetween } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { ProjectSummary } from "@/server/projects";
 import { DueLabel, HighPriority, Initials, StatusPill } from "./project-bits";
@@ -87,6 +88,27 @@ type DragProps = {
   handle?: HTMLAttributes<HTMLButtonElement> & { ref?: Ref<HTMLButtonElement> };
 };
 
+/**
+ * As the due date nears, the whole card warms from a light orange (a week out) to red (due today),
+ * and stays red once overdue. Completed projects and projects without a date stay neutral.
+ * The tint is mixed into the card colour, so it works in both themes and keeps text contrast.
+ */
+function dueTint(p: ProjectSummary, today: string): CSSProperties | undefined {
+  if (!p.dueDate || p.status === "completed") return undefined;
+  const days = daysBetween(today, p.dueDate);
+  if (days > 7) return undefined;
+  if (days < 0) {
+    return { background: "color-mix(in oklch, var(--card), var(--negative) 14%)", borderColor: "color-mix(in oklch, var(--border), var(--negative) 45%)" };
+  }
+  // 7 days → light orange, 0 days → red: the hue walks from orange to red as the date arrives.
+  const k = 1 - days / 7;
+  const hue = `color-mix(in oklch, #f59e0b, var(--negative) ${Math.round(k * 100)}%)`;
+  return {
+    background: `color-mix(in oklch, var(--card), ${hue} ${Math.round(7 + k * 7)}%)`,
+    borderColor: `color-mix(in oklch, var(--border), ${hue} ${Math.round(25 + k * 25)}%)`,
+  };
+}
+
 export const ProjectCard = memo(function ProjectCard({
   p,
   ownerName,
@@ -105,10 +127,11 @@ export const ProjectCard = memo(function ProjectCard({
   drag?: DragProps;
 }) {
   const { ref: handleRef, ...handleProps } = drag?.handle ?? {};
+  const tint = dueTint(p, today);
   return (
     <div
       ref={drag?.ref}
-      style={drag?.style}
+      style={{ ...drag?.style, ...tint }}
       className={cn(
         "group relative flex flex-col gap-4 rounded-xl border bg-card p-5 transition-[border-color,box-shadow] duration-150 hover:border-foreground/25 has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50",
         drag?.dragging && "z-20 border-foreground/30 shadow-md",

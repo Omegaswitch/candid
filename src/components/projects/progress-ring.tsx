@@ -1,13 +1,31 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar";
 import { fmt, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 
+/** Colour scale the ring travels through as stages complete: blue → cyan → teal → green. */
+const STOPS: [number, number, number][] = [
+  [37, 99, 235],
+  [6, 182, 212],
+  [20, 184, 166],
+  [34, 197, 94],
+  [22, 163, 74],
+];
+/** A colour from the scale at 0..1, interpolated between stops so the change is gradual. */
+export function stageColour(x: number) {
+  const f = Math.min(1, Math.max(0, x)) * (STOPS.length - 1);
+  const i = Math.min(STOPS.length - 2, Math.floor(f));
+  const k = f - i;
+  const [a, b] = [STOPS[i], STOPS[i + 1]];
+  return `rgb(${a.map((v, j) => Math.round(v + (b[j] - v) * k)).join(" ")})`;
+}
+
 /**
- * A ring of steps: one arc per checklist item, filling in order as items are ticked. The colour
- * travels from the progress blue to the done green as the project nears completion, and the ring
- * closes with a tick at 100%. Transitions are CSS, so reduced motion turns them off globally.
+ * Step ring (Magic UI animated circular progress bar): the arc animates to the new length and
+ * colour whenever a step is ticked. Around it, one tick per step in that step's own colour from
+ * the scale, lit when done. Reduced motion removes the animation (globals.css).
  */
 export function ProgressRing({
   done,
@@ -20,95 +38,64 @@ export function ProgressRing({
   done: number;
   total: number;
   size?: number;
-  /** Short marks outside the ring, one per step (the large card ring). */
+  /** Marks outside the ring, one per step (the large card ring). */
   ticks?: boolean;
-  /** A small word under the count, e.g. "completed". */
+  /** A small word under the count, e.g. "done". */
   caption?: string;
   className?: string;
 }) {
-  const stroke = size >= 96 ? 9 : size >= 52 ? 5 : 4;
-  const tickLen = ticks ? Math.max(5, size * 0.06) : 0;
-  const r = (size - stroke) / 2 - (ticks ? tickLen + 3 : 0);
-  const c = 2 * Math.PI * r;
   const ratio = total ? done / total : 0;
   const complete = total > 0 && done === total;
-  // Segments read as steps up to ~24; beyond that a continuous arc is clearer.
-  const segmented = total > 1 && total <= 24;
-  const gap = segmented ? Math.min(4, c / total / 3) : 0;
-  const seg = segmented ? c / total : c;
-  const colour = complete ? "var(--positive)" : `color-mix(in oklch, var(--positive) ${Math.round(ratio * 70)}%, var(--hue))`;
   const label = total ? fmt(t.projects.checklist, { done, total }) : t.projects.noTasks;
+  // The gauge sits inside the tick band on the big ring.
+  const inner = ticks ? Math.round(size * 0.78) : size;
+  const n = Math.min(total, 60);
 
   return (
     <div role="img" aria-label={label} className={cn("relative flex-none", className)} style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        {(segmented ? Array.from({ length: total }, (_, i) => i) : [0]).map((i) => {
-          const filled = segmented ? i < done : false;
-          return (
-            <circle
-              key={i}
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              fill="none"
-              strokeWidth={stroke}
-              strokeLinecap={segmented ? "butt" : "round"}
-              strokeDasharray={`${seg - gap} ${c - seg + gap}`}
-              strokeDashoffset={-i * seg}
-              className="stroke-raised"
-              style={filled ? { stroke: colour, transition: "stroke 250ms ease, opacity 250ms ease" } : { transition: "stroke 250ms ease" }}
-            />
-          );
-        })}
-        {ticks &&
-          total > 0 &&
-          Array.from({ length: Math.min(total, 60) }, (_, i) => {
-            const n = Math.min(total, 60);
+      {ticks && n > 0 && (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 -rotate-90" aria-hidden>
+          {Array.from({ length: n }, (_, i) => {
             const a = ((i + 0.5) / n) * 2 * Math.PI;
-            const r1 = r + stroke / 2 + 3;
-            const r2 = r1 + tickLen;
-            const lit = i < Math.round((done / total) * n);
+            const r1 = inner / 2 + size * 0.03;
+            const r2 = size / 2 - 1;
+            const lit = i < Math.round(ratio * n);
             return (
               <line
-                key={`t${i}`}
+                key={i}
                 x1={size / 2 + r1 * Math.cos(a)}
                 y1={size / 2 + r1 * Math.sin(a)}
                 x2={size / 2 + r2 * Math.cos(a)}
                 y2={size / 2 + r2 * Math.sin(a)}
-                strokeWidth={2}
+                strokeWidth={2.5}
                 strokeLinecap="round"
                 className="stroke-border"
-                style={lit ? { stroke: colour, transition: "stroke 250ms ease" } : { transition: "stroke 250ms ease" }}
+                style={{ stroke: lit ? stageColour(n > 1 ? i / (n - 1) : 1) : undefined, transition: "stroke 400ms ease" }}
               />
             );
           })}
-        {!segmented && total > 0 && (
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            strokeDasharray={`${c * ratio} ${c}`}
-            style={{ stroke: colour, transition: "stroke-dasharray 300ms ease, stroke 250ms ease" }}
-          />
-        )}
-      </svg>
-      <span className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-        {complete ? (
-          <Check className="text-positive" style={{ width: size * 0.42, height: size * 0.42 }} strokeWidth={2.6} aria-hidden />
-        ) : (
-          <span className="num font-semibold leading-none tracking-tight" style={{ fontSize: Math.max(11, size * 0.24) }} aria-hidden>
-            {total ? `${done}/${total}` : "–"}
-          </span>
-        )}
-        {caption && size >= 96 && (
-          <span className="text-[11px] leading-none text-muted-foreground" aria-hidden>
-            {complete ? t.projects.allDoneShort : caption}
-          </span>
-        )}
-      </span>
+        </svg>
+      )}
+      <AnimatedCircularProgressBar
+        value={Math.round(ratio * 100)}
+        gaugePrimaryColor={done > 0 ? stageColour(ratio) : "transparent"}
+        gaugeSecondaryColor="color-mix(in oklch, var(--foreground) 9%, transparent)"
+        className="absolute"
+        style={{ width: inner, height: inner, left: (size - inner) / 2, top: (size - inner) / 2 }}
+      >
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-0.5" aria-hidden>
+          {complete ? (
+            <Check style={{ width: inner * 0.36, height: inner * 0.36, color: stageColour(1) }} strokeWidth={2.6} />
+          ) : (
+            <span className="num font-semibold leading-none tracking-tight" style={{ fontSize: Math.max(11, inner * 0.24) }}>
+              {total ? `${done}/${total}` : "–"}
+            </span>
+          )}
+          {caption && total > 0 && size >= 96 && (
+            <span className="text-[11px] leading-none text-muted-foreground">{complete ? t.projects.allDoneShort : caption}</span>
+          )}
+        </span>
+      </AnimatedCircularProgressBar>
     </div>
   );
 }
