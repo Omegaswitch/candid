@@ -31,12 +31,13 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  const page = (
+  // ClerkProvider sits inside <body>, as the current Clerk SDK expects; the dev stand-in has none.
+  const app = <Providers>{children}</Providers>;
+  return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full bg-background text-foreground text-sm">
-        <Providers>{children}</Providers>
+        {authMode === "clerk" ? <ClerkProvider signInUrl="/sign-in">{app}</ClerkProvider> : app}
       </body>
     </html>
   );
-  return authMode === "clerk" ? <ClerkProvider>{page}</ClerkProvider> : page;
 }
