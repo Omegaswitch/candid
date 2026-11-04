@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ProgressRing } from "@/components/projects/progress-ring";
 import { t } from "@/i18n";
+import KineticGrid from "@/components/ui/kinetic-grid";
 import { LanguageSwitch } from "./language-switch";
 import { Mark } from "./app-shell";
 
@@ -13,10 +14,7 @@ export function Landing({ children }: { children: ReactNode }) {
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
       <section className="relative flex flex-col justify-between gap-10 border-b bg-card px-6 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:px-16 lg:py-14">
-        <div className="flex items-center gap-2.5">
-          <Mark className="size-6" />
-          <span className="font-semibold">{t.common.appName}</span>
-        </div>
+        <div aria-hidden />
 
         <div className="flex flex-col gap-8">
           <div className="flex items-center gap-5">
@@ -41,12 +39,14 @@ export function Landing({ children }: { children: ReactNode }) {
         <p className="text-xs text-muted-foreground">{l.footer}</p>
       </section>
 
-      <section className="relative flex flex-col items-center justify-center gap-6 px-6 py-10">
-        <div className="absolute right-4 top-4">
-          <LanguageSwitch />
-        </div>
-        {children}
-      </section>
+      <KineticGrid className="min-h-[560px] lg:min-h-0">
+        <section className="relative flex size-full min-h-[560px] flex-col items-center justify-center gap-6 px-6 py-16">
+          <div className="absolute right-4 top-4">
+            <LanguageSwitch />
+          </div>
+          {children}
+        </section>
+      </KineticGrid>
     </main>
   );
 }
