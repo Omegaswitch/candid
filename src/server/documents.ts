@@ -374,7 +374,7 @@ export async function downloadUrl(ctx: Ctx, id: string, opts: { inline: boolean 
  */
 export async function purgeRemovedDocuments(opts: { days?: number; now?: Date } = {}) {
   const now = opts.now ?? new Date();
-  const removedBefore = new Date(now.getTime() - (opts.days ?? 7) * 86_400_000);
+  const removedBefore = new Date(now.getTime() - (opts.days ?? 10) * 86_400_000);
   const pendingBefore = new Date(now.getTime() - 86_400_000);
   const rows = await db
     .select({ id: documents.id, storageKey: documents.storageKey })

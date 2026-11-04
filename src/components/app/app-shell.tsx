@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CircleAlert,
   CircleHelp,
+  Trash2,
   FolderKanban,
   Hourglass,
   ListChecks,
@@ -42,6 +43,7 @@ const NAV: NavItem[] = [
   { href: "/overdue", get label() { return t.nav.overdue; }, icon: CircleAlert, count: "overdue" },
   { href: "/waiting", get label() { return t.nav.waiting; }, icon: Hourglass, count: "waiting" },
   { href: "/archive", get label() { return t.nav.archive; }, icon: Archive },
+  { href: "/trash", get label() { return t.nav.trash; }, icon: Trash2 },
 ];
 
 /** The product mark: a ticked line over an open line — a checklist, drawn for Candid. */

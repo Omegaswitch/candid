@@ -36,13 +36,13 @@ export async function search(ctx: Ctx, raw: string): Promise<SearchResults> {
     db
       .select({ id: projects.id, name: projects.name, client: projects.client, archivedAt: projects.archivedAt })
       .from(projects)
-      .where(and(eq(projects.workspaceId, ctx.workspaceId), or(contains(projects.name), contains(projects.client))))
+      .where(and(eq(projects.workspaceId, ctx.workspaceId), isNull(projects.deletedAt), or(contains(projects.name), contains(projects.client))))
       .orderBy(sql`${projects.archivedAt} is not null`, prefixFirst(projects.name), asc(projects.name))
       .limit(LIMIT),
     db
       .select({ id: tasks.id, title: tasks.title, projectId: tasks.projectId, projectName: projects.name, done: tasks.done })
       .from(tasks)
-      .innerJoin(projects, and(eq(projects.id, tasks.projectId), eq(projects.workspaceId, ctx.workspaceId)))
+      .innerJoin(projects, and(eq(projects.id, tasks.projectId), eq(projects.workspaceId, ctx.workspaceId), isNull(projects.deletedAt)))
       .where(and(eq(tasks.workspaceId, ctx.workspaceId), isNull(tasks.deletedAt), contains(tasks.title)))
       .orderBy(asc(tasks.done), prefixFirst(tasks.title), asc(tasks.title))
       .limit(LIMIT),

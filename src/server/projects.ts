@@ -69,7 +69,7 @@ export async function listProjectSummaries(
 ): Promise<ProjectSummary[]> {
   const today = opts.today ?? todayUtc();
   const where: SQL[] = [eq(projects.workspaceId, ctx.workspaceId)];
-  where.push(opts.archived ? isNotNull(projects.archivedAt) : isNull(projects.archivedAt));
+  where.push(opts.archived ? isNotNull(projects.archivedAt) : isNull(projects.archivedAt), isNull(projects.deletedAt));
   if (opts.ids) where.push(inArray(projects.id, opts.ids.length ? opts.ids : ["00000000-0000-0000-0000-000000000000"]));
 
   const live = sql`${tasks.deletedAt} is null`;
@@ -117,7 +117,7 @@ async function loadProject(ctx: Ctx, id: string, tx: Tx | typeof db = db) {
   const [p] = await tx
     .select()
     .from(projects)
-    .where(and(eq(projects.id, id), eq(projects.workspaceId, ctx.workspaceId)));
+    .where(and(eq(projects.id, id), eq(projects.workspaceId, ctx.workspaceId), isNull(projects.deletedAt)));
   if (!p) throw notFound("Project");
   return p;
 }
@@ -238,9 +238,13 @@ export async function deleteArchivedProject(ctx: Ctx, id: string) {
   const p = await loadProject(ctx, id);
   if (!p.archivedAt) throw new AppError("invalid", "Only archived projects can be deleted. Archive it first.");
   await db.transaction(async (tx) => {
+    // Into the trash, not gone: restorable for 10 days (see restoreFromTrash / purgeTrash).
     await tx.delete(favorites).where(and(eq(favorites.workspaceId, ctx.workspaceId), eq(favorites.entityId, id)));
-    await tx.delete(projects).where(and(eq(projects.id, id), eq(projects.workspaceId, ctx.workspaceId), isNotNull(projects.archivedAt)));
-    await logActivity(ctx, { entityType: "project", entityId: null, action: "deleted", data: { name: p.name } }, tx);
+    await tx
+      .update(projects)
+      .set({ deletedAt: new Date(), version: sql`${projects.version} + 1` })
+      .where(and(eq(projects.id, id), eq(projects.workspaceId, ctx.workspaceId), isNotNull(projects.archivedAt)));
+    await logActivity(ctx, { entityType: "project", entityId: id, action: "deleted", data: { name: p.name } }, tx);
   });
 }
 

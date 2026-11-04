@@ -84,7 +84,7 @@ async function loadSnapshot(ctx: Ctx, req: ImportRequest, tx: Tx | typeof db = d
       notes: sql<string>`case when ${inArray(projects.id, wanted.length ? wanted : [NIL])} then ${projects.notes} else '' end`,
     })
     .from(projects)
-    .where(eq(projects.workspaceId, ctx.workspaceId));
+    .where(and(eq(projects.workspaceId, ctx.workspaceId), isNull(projects.deletedAt)));
   const members = await tx
     .select({ id: memberships.id, email: memberships.email })
     .from(memberships)

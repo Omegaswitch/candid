@@ -78,6 +78,8 @@ export const projects = pgTable(
     version: integer("version").notNull().default(1),
     archivedAt: ts("archived_at"),
     archivedBy: uuid("archived_by").references(() => memberships.id, { onDelete: "set null" }),
+    // In the trash (deleted from the Archive): hidden everywhere, restorable for 10 days, then purged.
+    deletedAt: ts("deleted_at"),
     createdBy: uuid("created_by").references(() => memberships.id, { onDelete: "set null" }),
     createdAt: created(),
     updatedAt: updated(),

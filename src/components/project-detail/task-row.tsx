@@ -164,7 +164,7 @@ export function TaskRow({
             {...attributes}
             {...listeners}
           >
-            <GripVertical aria-hidden className="size-3.5" />
+            <GripVertical aria-hidden className="size-4" />
           </button>
         )}
         <span className="flex h-8 w-8 flex-none items-center justify-center">
@@ -177,8 +177,8 @@ export function TaskRow({
                 onChange={() => onToggle()}
                 label=""
                 strike="none"
-                boxSize={20}
-                boxRadius={10}
+                boxSize={24}
+                boxRadius={12}
                 color="var(--foreground)"
                 fillColor="var(--positive)"
                 checkColor="var(--primary-foreground)"

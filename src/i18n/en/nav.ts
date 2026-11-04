@@ -20,6 +20,7 @@ export const nav = {
   userMenu: "Account",
   userMenuLabel: "{initials}: account menu for {name}",
   help: "Help",
+  trash: "Trash",
   privacy: "Privacy notice",
   skipToContent: "Skip to content",
 };

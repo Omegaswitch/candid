@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackButton } from "@/components/app/back-button";
 import { fmt, t } from "@/i18n";
 
 const l = t.legal;
@@ -35,6 +36,7 @@ export default function PrivacyPage() {
   return (
     <article className="mx-auto grid w-full max-w-2xl gap-8 text-sm leading-relaxed">
       <header className="grid gap-1">
+        <BackButton />
         <h1 className="text-2xl font-semibold tracking-tight">{p.title}</h1>
         <p className="text-muted-foreground">{fmt(p.lastUpdated, { date: l.lastUpdated })}</p>
         <p className="mt-2">{p.intro}</p>

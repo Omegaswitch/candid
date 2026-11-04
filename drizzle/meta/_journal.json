@@ -15,6 +15,13 @@
       "when": 1793815254179,
       "tag": "0001_default_template",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793831914279,
+      "tag": "0002_trash",
+      "breakpoints": true
     }
   ]
 }

@@ -110,12 +110,12 @@ describe("document uploads", () => {
     expect(await listDocuments(ctx)).toHaveLength(1);
   });
 
-  it("purge deletes objects of documents removed more than 7 days ago", async () => {
+  it("purge deletes objects of documents removed more than 10 days ago", async () => {
     const ctx = await makeCtx();
     const doc = await upload(ctx, "Old.pdf", "application/pdf", PDF);
     const [row] = await db.select().from(documents).where(eq(documents.id, doc.id));
     await setDocumentRemoved(ctx, doc.id, true);
-    await purgeRemovedDocuments({ now: new Date(Date.now() + 8 * 86_400_000) });
+    await purgeRemovedDocuments({ now: new Date(Date.now() + 11 * 86_400_000) });
     expect(await storage().head(row.storageKey!)).toBeNull();
     expect(await db.select().from(documents).where(eq(documents.id, doc.id))).toHaveLength(0);
   });

@@ -1,3 +1,4 @@
+import { trash } from "./trash";
 import { help } from "./help";
 import { common } from "./common";
 import { documents } from "./documents";
@@ -11,4 +12,4 @@ import { settings } from "./settings";
 import { tasks } from "./tasks";
 import { views } from "./views";
 
-export const cs = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help };
+export const cs = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help, trash };

@@ -46,6 +46,7 @@ export async function buildExportBundle(ctx: Ctx, scope: ExportScope | unknown):
     where.push(isNull(projects.archivedAt));
   }
 
+  where.push(isNull(projects.deletedAt)); // never export what is in the trash
   const ps = await db
     .select()
     .from(projects)

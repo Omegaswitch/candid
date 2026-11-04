@@ -11,6 +11,7 @@ export const common: Localized<typeof import("../en/common").common> = {
     point3: "Na první pohled uvidíte, co se blíží, čeká nebo je po termínu.",
     footer: "Interní nástroj. Přihlaste se pracovním e-mailem.",
   },
+  back: "Zpět",
   save: "Uložit",
   saving: "Ukládání…",
   saved: "Uloženo",

@@ -7,6 +7,7 @@ export const common = {
     point3: "See what is due, waiting or late at a glance.",
     footer: "Internal tool. Sign in with your work email.",
   },
+  back: "Back",
   save: "Save",
   saving: "Saving…",
   saved: "Saved",

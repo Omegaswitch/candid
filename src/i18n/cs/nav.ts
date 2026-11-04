@@ -22,6 +22,7 @@ export const nav: Localized<typeof import("../en/nav").nav> = {
   userMenu: "Účet",
   userMenuLabel: "{initials}: nabídka účtu pro {name}",
   help: "Nápověda",
+  trash: "Koš",
   privacy: "Ochrana osobních údajů",
   skipToContent: "Přeskočit na obsah",
 };

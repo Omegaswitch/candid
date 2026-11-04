@@ -148,8 +148,14 @@ export function AddDocumentMenu({ projectId, children, align = "start" }: { proj
 
 export function AddIconButton({ label, ...props }: { label: string } & React.ComponentProps<typeof Button>) {
   return (
-    <Button variant="ghost" size="icon-xs" aria-label={label} className="text-muted-foreground" {...props}>
-      <Plus />
+    <Button
+      variant="outline"
+      size="icon-sm"
+      aria-label={label}
+      className="size-7 rounded-full border-foreground/25 text-foreground hover:border-foreground/50 hover:bg-sidebar-accent"
+      {...props}
+    >
+      <Plus className="size-4" strokeWidth={2.2} />
     </Button>
   );
 }
