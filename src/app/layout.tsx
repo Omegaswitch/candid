@@ -5,7 +5,7 @@ import { csCZ } from "@clerk/localizations";
 import { cookies } from "next/headers";
 import { Providers } from "@/components/app/providers";
 import { authMode } from "@/lib/auth/session";
-import { currentLocale, LOCALE_COOKIE, parseLocale, t } from "@/i18n";
+import { currentLocale, t } from "@/i18n";
 import "./globals.css";
 
 // latin-ext covers Czech (ě š č ř ž ý á í é ů ú ň ť ď).
@@ -36,7 +36,8 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // The language cookie (set by LanguageSwitch). `t` reads the same cookie for this request, so
   // server HTML, <html lang> and the client's first render all agree.
-  const locale = parseLocale((await cookies()).get(LOCALE_COOKIE)?.value);
+  await cookies(); // marks the layout dynamic: the language is per request
+  const locale = currentLocale(); // the same source `t` uses, so <html lang> always matches the text
   // ClerkProvider sits inside <body>, as the current Clerk SDK expects; the dev stand-in has none.
   const app = <Providers>{children}</Providers>;
   return (

@@ -17,14 +17,15 @@ import { views } from "./en/views";
  * Every user-facing string lives under src/i18n/en/<namespace>.ts, and its Czech translation
  * under src/i18n/cs/<namespace>.ts (typed `Localized<…>` of the English one, so a missing or
  * extra key fails typecheck). `t` resolves to the viewer's locale, chosen per person with the
- * `candid_locale` cookie (see `setLocale`). English is the default.
+ * `candid_locale` cookie (see `setLocale`). Czech is the default; English is opt-in.
  */
 export const en = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal };
 export type Strings = typeof en;
 
 export type Locale = "en" | "cs";
 export const LOCALE_COOKIE = "candid_locale";
-export const parseLocale = (v: string | null | undefined): Locale => (v === "cs" ? "cs" : "en");
+// Czech is the default; English only when someone picks it in the language switch.
+export const parseLocale = (v: string | null | undefined): Locale => (v === "en" ? "en" : "cs");
 
 const dictionaries: { en: Strings; cs: Localized<Strings> } = { en, cs };
 
@@ -40,7 +41,7 @@ const clientLocale: Locale | null =
  * `cache()`, that store is set for the whole request — server components, the SSR pass of client
  * components and route handlers alike — so concurrent requests never see each other's locale and
  * the server HTML matches what the browser renders from `document.cookie`. Outside a request
- * (build, tests, scripts) it is English. In the browser the store is a no-op stub.
+ * (build, tests, scripts) it is English, so tests and logs stay readable. In the browser the store is a no-op stub.
  */
 export function currentLocale(): Locale {
   if (clientLocale) return clientLocale;
