@@ -29,11 +29,11 @@ export function DocumentShelf() {
       <DocLink
         doc={d}
         onPreview={setPreview}
-        className="flex min-h-8 items-center gap-2.5 rounded-md px-2.5 py-1 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+        className="flex min-h-8 items-center gap-2.5 rounded-md px-2.5 py-1 text-[15px] text-foreground/85 transition-colors hover:bg-sidebar-accent hover:text-foreground"
       >
         <DocIcon doc={d} />
         <span className="grid min-w-0">
-          {d.projectName && <span className="truncate text-[11px] leading-tight text-muted-foreground/90">{d.projectName}</span>}
+          {d.projectName && <span className="truncate text-xs leading-tight text-muted-foreground">{d.projectName}</span>}
           <span className="truncate">{d.name}</span>
         </span>
       </DocLink>
@@ -86,10 +86,10 @@ export function DocumentShelf() {
         <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfEmpty}</p>
       ) : (
         <>
-          <h3 className="mt-1 px-2.5 text-[11px] text-muted-foreground">{s.shelfGeneral}</h3>
+          <h3 className="mt-1 px-2.5 text-xs font-medium text-muted-foreground">{s.shelfGeneral}</h3>
           {general.length ? <ul className="flex flex-col gap-0.5">{general.map(row)}</ul> : <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfNone}</p>}
           <hr className="mx-2.5 my-2 border-sidebar-border" />
-          <h3 className="px-2.5 text-[11px] text-muted-foreground">{s.shelfByProject}</h3>
+          <h3 className="px-2.5 text-xs font-medium text-muted-foreground">{s.shelfByProject}</h3>
           {byProject.length ? <ul className="flex flex-col gap-0.5">{byProject.map(row)}</ul> : <p className="px-2.5 py-1 text-xs text-muted-foreground">{s.shelfNone}</p>}
         </>
       )}
