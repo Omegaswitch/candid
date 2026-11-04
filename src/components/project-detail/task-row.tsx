@@ -76,7 +76,7 @@ function TaskDetails({ projectId, task, onPatch }: { projectId: string; task: Ta
           <label htmlFor={`${id}-a`} className={label}>
             {t.tasks.assignee}
           </label>
-          <MemberSelect id={`${id}-a`} value={task.assigneeId} onChange={(assigneeId) => onPatch({ assigneeId })} className="-ml-2 border-input" />
+          <MemberSelect id={`${id}-a`} value={task.assigneeId} onChange={(assigneeId) => onPatch({ assigneeId })} className="border-input" />
         </div>
         <div className="grid gap-1">
           <label htmlFor={`${id}-d`} className={label}>

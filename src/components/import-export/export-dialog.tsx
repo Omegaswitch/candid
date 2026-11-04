@@ -99,6 +99,7 @@ export function ExportDialog({ open, onOpenChange, preset }: { open: boolean; on
           {SCOPES.map((k) => (
             <Choice key={k} name="export-scope" value={k} checked={scope === k} disabled={!available(k)} onChange={() => setScope(k)} label={scopeLabel(k)} />
           ))}
+          {!available("view") && <p className="px-2 text-xs text-muted-foreground">{s.scopeUnavailable}</p>}
           <div className={cn("flex items-center gap-2 pl-6 pt-1", scope !== "workspace" && "opacity-50")}>
             <Checkbox id="export-archived" checked={includeArchived} disabled={scope !== "workspace"} onCheckedChange={(v) => setIncludeArchived(v === true)} />
             <Label htmlFor="export-archived" className="font-normal">

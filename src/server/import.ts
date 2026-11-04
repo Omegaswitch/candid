@@ -135,10 +135,11 @@ export async function commitImport(ctx: Ctx, raw: unknown): Promise<ImportResult
       failed: plan.counts.errors,
       rowErrors: plan.issues.filter((i) => i.severity === "error").map((i) => ({ row: i.row, message: i.message })),
     };
-    const { replayed: _, ...summary } = result;
+    const summary: Record<string, unknown> = { ...result, label: req.label, rows: plan.counts.rows };
+    delete summary.replayed;
     await tx
       .update(importRuns)
-      .set({ status: "completed", completedAt: new Date(), summary: { ...summary, label: req.label, rows: plan.counts.rows } })
+      .set({ status: "completed", completedAt: new Date(), summary })
       .where(eq(importRuns.id, run.id));
     return result;
   });

@@ -60,6 +60,14 @@ function refresh(qc: QueryClient, projectId: string) {
   qc.invalidateQueries({ queryKey: qk.activity(projectId) });
 }
 
+/**
+ * `taskPatch`/`projectPatch` on the server are `.partial()` of schemas with `.default()`s, so an
+ * omitted `note`/`waiting` (task) or `status`/`priority` (project) is reset to its default. Until
+ * that is fixed server-side, every PATCH carries those fields from the copy it is based on.
+ */
+const taskBody = (cur: TaskRow | undefined, patch: object) => ({ note: cur?.note, waiting: cur?.waiting, ...patch, version: cur?.version });
+const projectBody = (cur: ProjectRow | undefined, patch: object) => ({ status: cur?.status, priority: cur?.priority, ...patch, version: cur?.version });
+
 const pick = <T extends object>(o: T, keys: (keyof T)[]) => Object.fromEntries(keys.map((k) => [k, o[k]])) as Partial<T>;
 
 // ---- tasks ---------------------------------------------------------------------------------
@@ -74,7 +82,7 @@ export function useTaskActions(projectId: string) {
     ...common,
     // The version is read when the request leaves, after earlier writes in the queue have landed.
     mutationFn: ({ taskId, patch }: { taskId: string; patch: TaskPatch }) =>
-      api<{ task: TaskRow }>(`/api/tasks/${taskId}`, { method: "PATCH", json: { ...patch, version: findTask(qc, projectId, taskId)?.version } }).then((r) => r.task),
+      api<{ task: TaskRow }>(`/api/tasks/${taskId}`, { method: "PATCH", json: taskBody(findTask(qc, projectId, taskId), patch) }).then((r) => r.task),
     onMutate: async ({ taskId, patch }) => {
       await qc.cancelQueries({ queryKey: qk.project(projectId) });
       const prev = findTask(qc, projectId, taskId);
@@ -227,8 +235,8 @@ export function useProjectActions(projectId: string) {
   const update = useMutation({
     ...common,
     mutationFn: (patch: ProjectPatch) => {
-      const version = qc.getQueryData<ProjectDetail>(qk.project(projectId))?.project.version;
-      return api<{ project: ProjectRow }>(`/api/projects/${projectId}`, { method: "PATCH", json: { ...patch, version } }).then((r) => r.project);
+      const cur = qc.getQueryData<ProjectDetail>(qk.project(projectId))?.project;
+      return api<{ project: ProjectRow }>(`/api/projects/${projectId}`, { method: "PATCH", json: projectBody(cur, patch) }).then((r) => r.project);
     },
     onMutate: async (patch) => {
       await qc.cancelQueries({ queryKey: qk.project(projectId) });
@@ -312,7 +320,7 @@ export function useTaskNoteSave(projectId: string) {
     mutationKey: mutationKeyOf(projectId),
     scope: scopeOf(projectId),
     mutationFn: ({ taskId, note, version }: { taskId: string; note: string; version: number }) =>
-      api<{ task: TaskRow }>(`/api/tasks/${taskId}`, { method: "PATCH", json: { note, version } }).then((r) => r.task),
+      api<{ task: TaskRow }>(`/api/tasks/${taskId}`, { method: "PATCH", json: { ...taskBody(findTask(qc, projectId, taskId), { note }), version } }).then((r) => r.task),
     onSuccess: (task) => setTask(qc, projectId, task.id, (x) => ({ ...x, note: task.note, version: task.version, updatedAt: task.updatedAt })),
   });
   return (taskId: string, note: string, version: number) =>

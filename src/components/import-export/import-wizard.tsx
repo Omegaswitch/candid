@@ -36,9 +36,8 @@ export function ImportWizard({ open, onOpenChange }: { open: boolean; onOpenChan
   const [strictEmails, setStrictEmails] = useState(false);
   const [skipRows, setSkipRows] = useState<number[]>([]);
   const [acceptDuplicates, setAcceptDuplicates] = useState<number[]>([]);
-  const [plan, setPlan] = useState<ImportPlan | null>(null);
-  const [planError, setPlanError] = useState<string | null>(null);
-  const [planLoading, setPlanLoading] = useState(false);
+  // The last preview answer, tagged with the request (and retry count) it answers.
+  const [preview, setPreview] = useState<{ for: ImportRequest; reload: number; plan: ImportPlan | null; error: string | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -59,7 +58,7 @@ export function ImportWizard({ open, onOpenChange }: { open: boolean; onOpenChan
     setDateOrders({});
     setSkipRows([]);
     setAcceptDuplicates([]);
-    setPlan(null);
+    setPreview(null);
     // A sheet with IDs most likely came from an export: suggest updating.
     const idCols = m.flatMap((f, i) => (f === "projectId" || f === "taskId" ? [i] : []));
     setMode(idCols.length && tbl.rows.some((r) => idCols.some((i) => typeof r[i] === "string" && r[i] !== "")) ? "update" : "create");
@@ -96,16 +95,18 @@ export function ImportWizard({ open, onOpenChange }: { open: boolean; onOpenChan
   // Preview whenever the review is shown or its inputs change. Stale answers are ignored.
   const seq = useRef(0);
   const [reload, setReload] = useState(0);
+  const current = !!preview && preview.for === request && preview.reload === reload;
   useEffect(() => {
-    if (step !== 3 || !request) return;
+    if (step !== 3 || !request || current) return;
     const n = ++seq.current;
-    setPlanLoading(true);
-    setPlanError(null);
     api<{ plan: ImportPlan }>("/api/import/preview", { method: "POST", json: request })
-      .then((r) => n === seq.current && setPlan(r.plan))
-      .catch((e: unknown) => n === seq.current && setPlanError(errorText(e)))
-      .finally(() => n === seq.current && setPlanLoading(false));
-  }, [step, request, reload]);
+      .then((r) => n === seq.current && setPreview({ for: request, reload, plan: r.plan, error: null }))
+      .catch((e: unknown) => n === seq.current && setPreview((p) => ({ for: request, reload, plan: p?.plan ?? null, error: errorText(e) })));
+  }, [step, request, reload, current]);
+  const planLoading = step === 3 && !current;
+  const planError = current ? preview.error : null;
+  // While a new preview loads, the previous plan stays on screen (dimmed).
+  const plan = preview?.plan ?? null;
 
   async function submit() {
     if (!request || submitting) return;
