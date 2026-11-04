@@ -89,23 +89,19 @@ type DragProps = {
 };
 
 /**
- * As the due date nears, the whole card warms from a light orange (a week out) to red (due today),
- * and stays red once overdue. Completed projects and projects without a date stay neutral.
- * The tint is mixed into the card colour, so it works in both themes and keeps text contrast.
+ * As the due date nears, the card's border warms from light orange (a week out) to red (due today),
+ * and stays red once overdue. Completed projects and projects without a date keep the normal border.
  */
 function dueTint(p: ProjectSummary, today: string): CSSProperties | undefined {
   if (!p.dueDate || p.status === "completed") return undefined;
   const days = daysBetween(today, p.dueDate);
   if (days > 7) return undefined;
-  if (days < 0) {
-    return { background: "color-mix(in oklch, var(--card), var(--negative) 14%)", borderColor: "color-mix(in oklch, var(--border), var(--negative) 45%)" };
-  }
-  // 7 days → light orange, 0 days → red: the hue walks from orange to red as the date arrives.
+  if (days < 0) return { borderColor: "var(--negative)", borderWidth: 2 };
+  // 7 days → light orange, 0 days → red: the border's hue walks from orange to red as the date arrives.
   const k = 1 - days / 7;
-  const hue = `color-mix(in oklch, #f59e0b, var(--negative) ${Math.round(k * 100)}%)`;
   return {
-    background: `color-mix(in oklch, var(--card), ${hue} ${Math.round(7 + k * 7)}%)`,
-    borderColor: `color-mix(in oklch, var(--border), ${hue} ${Math.round(25 + k * 25)}%)`,
+    borderColor: `color-mix(in oklch, #f59e0b, var(--negative) ${Math.round(k * 100)}%)`,
+    borderWidth: k > 0.5 ? 2 : 1.5,
   };
 }
 
