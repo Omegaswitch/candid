@@ -1,10 +1,11 @@
+import type { Metadata } from "next";
 import { db } from "@/db";
 import { memberships } from "@/db/schema";
 import { authMode } from "@/lib/auth/session";
 import { t } from "@/i18n";
 import { ClerkSignIn } from "./clerk-sign-in";
 
-export const metadata = { title: t.common.signIn };
+export const generateMetadata = (): Metadata => ({ title: t.common.signIn });
 
 export default async function SignInPage() {
   if (authMode === "clerk") return <ClerkSignIn />;

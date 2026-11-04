@@ -18,6 +18,7 @@ export const settings: Localized<typeof import("../en/settings").settings> = {
     appearanceHelp: "Ukládá se jen v\u00a0tomto prohlížeči.",
     themeNote: "Mezi světlým, tmavým a\u00a0systémovým vzhledem přepínáte tlačítkem v\u00a0horní liště.",
     currentTheme: "Aktuální vzhled",
+    language: "Jazyk",
     timezoneTitle: "Časové pásmo",
     timezoneHelp:
       "Převzato z\u00a0prohlížeče. Používá se pro časy jako „upraveno před 5 minutami“; termíny jsou kalendářní dny a\u00a0nikdy se neposouvají.",

@@ -3,7 +3,8 @@ import { t } from "@/i18n";
 
 // The static link-preview card: the Candid mark and wordmark, ink on the light ground
 // (globals.css --foreground on --ground). Static on purpose: previews never carry project data.
-export const alt = `${t.common.appName} — ${t.common.tagline}`;
+// The preview image is shared by every language; its alt text stays in English.
+export const alt = "Candid — projects, checklists, notes and documents for the team";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

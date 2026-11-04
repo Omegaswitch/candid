@@ -39,7 +39,7 @@ export function ArchiveList() {
     <div className="flex max-w-[1100px] flex-col gap-5">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{a.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <div className="mt-1 text-sm text-muted-foreground">
           {q.isPending ? (
             a.subline.split("{n}").map((part, i) => (
               <span key={i}>
@@ -52,7 +52,7 @@ export function ArchiveList() {
           ) : (
             a.sublineEmpty
           )}
-        </p>
+        </div>
       </header>
 
       {q.isError ? (

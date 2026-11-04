@@ -4,7 +4,7 @@ import { fmt, t } from "@/i18n";
 const l = t.legal;
 const p = l.privacy;
 
-export const metadata: Metadata = { title: p.title };
+export const generateMetadata = (): Metadata => ({ title: p.title });
 
 const vars = { controller: l.controller, contact: l.contact };
 

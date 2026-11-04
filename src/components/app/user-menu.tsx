@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { fmt, t } from "@/i18n";
 import { initials } from "@/lib/people";
+import { LanguageSwitch } from "./language-switch";
 import { useSession } from "./session";
 
 export function UserMenu() {
@@ -32,6 +33,9 @@ export function UserMenu() {
           <div className="font-medium">{s.name}</div>
           <div className="truncate text-xs text-muted-foreground">{s.email}</div>
         </DropdownMenuLabel>
+        <div className="px-2 pb-2" onKeyDown={(e) => e.stopPropagation()}>
+          <LanguageSwitch className="w-full" />
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/settings"><Settings className="size-4" />{t.nav.settings}</Link>

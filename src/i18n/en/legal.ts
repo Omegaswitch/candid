@@ -50,6 +50,7 @@ export const legal = {
         "Sign-in session cookies set by Clerk, so you stay signed in.",
         "A short-lived cookie while you connect a Google account, which ties the Google consent screen to your browser. It is removed when the connection finishes.",
         "Your theme choice (light, dark or system) is kept in this browser's local storage, not in a cookie.",
+        "Your language choice (English or Czech), in a cookie named candid_locale, so pages open in your language.",
       ],
       none: "There are no analytics, advertising or tracking cookies and no third-party trackers.",
     },

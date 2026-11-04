@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TaskView } from "@/components/views/task-view";
 import { t } from "@/i18n";
 
-export const metadata: Metadata = { title: t.views["waiting"].title };
+export const generateMetadata = (): Metadata => ({ title: t.views["waiting"].title });
 
 export default function Page() {
   return <TaskView view="waiting" />;

@@ -17,6 +17,7 @@ export const settings = {
     appearanceHelp: "Saved in this browser only.",
     themeNote: "Switch between light, dark and your system setting from the theme button in the top bar.",
     currentTheme: "Current theme",
+    language: "Language",
     timezoneTitle: "Time zone",
     timezoneHelp: "Taken from your browser. Times such as “edited 5 minutes ago” use it; deadlines are calendar days and never shift.",
     timezone: "Your time zone",

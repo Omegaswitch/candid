@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LanguageSwitch } from "@/components/app/language-switch";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { useSession } from "@/components/app/session";
@@ -39,6 +40,9 @@ export function GeneralSettings() {
         <p>{g.themeNote}</p>
         <dl className="mt-3">
           <Field label={g.currentTheme}>{local?.theme ?? t.common.none}</Field>
+          <Field label={g.language}>
+            <LanguageSwitch />
+          </Field>
         </dl>
       </SettingsSection>
       <SettingsSection title={g.timezoneTitle} description={g.timezoneHelp}>
