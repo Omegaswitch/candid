@@ -13,6 +13,8 @@ const pool =
     connectionString: process.env.DATABASE_URL,
     max: Number(process.env.DATABASE_POOL_MAX ?? 5),
     idleTimeoutMillis: 10_000,
+    // Neon's connection strings ask for SCRAM channel binding; node-postgres needs it switched on.
+    enableChannelBinding: /channel_binding=require/.test(process.env.DATABASE_URL ?? ""),
   });
 if (process.env.NODE_ENV !== "production") globalForDb.pgPool = pool;
 

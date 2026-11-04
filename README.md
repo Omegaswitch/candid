@@ -65,7 +65,7 @@ Both refuse to run with `NODE_ENV=production`.
    (Project → Settings → Functions → Region: `fra1` for Frankfurt). Add the environment variables from
    `.env.example` (leave `AUTH_MODE` and `LOCAL_STORAGE_DIR` unset; `STORAGE_DRIVER=s3`).
    `vercel.json` schedules the daily document purge; set `CRON_SECRET`.
-3. **Clerk**: create an application, enable the sign-in methods you want (email + Google is typical),
+3. **Clerk**: create an application, enable the sign-in methods you want (email works for any address; add Microsoft or another provider if you like),
    and copy `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Turn off public sign-ups if
    you want invite-only (accounts without an invite see "not a member" anyway). Set
    `BOOTSTRAP_ADMIN_EMAILS` to the first admin's email; they become admin on first sign-in with that
