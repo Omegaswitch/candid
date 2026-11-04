@@ -1,12 +1,13 @@
 "use client";
 
+import { compressForUpload } from "./compress";
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fmt, t } from "@/i18n";
 import { ApiError, api } from "@/lib/api";
 import { qk } from "@/lib/query-keys";
 import type { DocumentDto } from "@/server/documents";
-import { FILE_TYPES, MAX_UPLOAD_BYTES, fileTypeOfName } from "./file-types";
+import { FILE_TYPES, MAX_UPLOAD_BYTES, fileTypeOfName, formatBytes } from "./file-types";
 
 export type { DocumentDto };
 
@@ -147,10 +148,13 @@ function uploadError(e: unknown) {
   return e instanceof Error ? e.message : t.common.errorGeneric;
 }
 
-function ProgressBar({ value }: { value: number }) {
+function ProgressBar({ value, label }: { value: number; label?: string }) {
   return (
-    <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-      <div className="h-full bg-hue transition-[width] duration-150" style={{ width: `${value}%` }} />
+    <div className="mt-1.5 flex items-center gap-2">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full bg-hue transition-[width] duration-150" style={{ width: `${value}%` }} />
+      </div>
+      {label && <span className="num w-10 text-right text-xs text-muted-foreground">{label}</span>}
     </div>
   );
 }
@@ -178,28 +182,38 @@ function postToStorage(upload: Upload, file: File, onProgress: (pct: number) => 
  * Upload one file: check type and size at once, ask the server for a presigned POST, send the file
  * straight to storage, then let the server verify it. Progress, success and errors show as one toast.
  */
-async function uploadOne(qc: QueryClient, file: File, opts: { projectId?: string | null; replaceId?: string }) {
+async function uploadOne(qc: QueryClient, original: File, opts: { projectId?: string | null; replaceId?: string }) {
+  let file = original;
   const id = toast.loading(fmt(s.upload.progress, { name: file.name }), { description: <ProgressBar value={0} /> });
   const fail = (msg: string) => toast.error(fmt(s.upload.failed, { name: file.name }), { id, description: msg });
   const type = fileTypeOfName(file.name);
   if (!type) return fail(s.upload.type);
-  if (file.size > MAX_UPLOAD_BYTES) return fail(s.upload.tooLarge);
   try {
+    // Phase 1: compress photos/screenshots (other types pass straight through).
+    file = await compressForUpload(original, (pct) =>
+      toast.loading(fmt(s.upload.compressing, { name: original.name }), { id, description: <ProgressBar value={pct} label={`${Math.round(pct)} %`} /> }),
+    );
+    if (file.size > MAX_UPLOAD_BYTES) return fail(s.upload.tooLarge);
     // Some systems report no type for known extensions; the server still checks the first bytes.
     const mimeType = file.type || FILE_TYPES[type].mime;
     const { uploadId, upload } = await api<{ uploadId: string; upload: Upload }>("/api/documents/uploads", {
       method: "POST",
       json: { name: file.name, mimeType, size: file.size, projectId: opts.projectId ?? undefined, replaceId: opts.replaceId },
     });
+    // Phase 2: upload, with its own percentage.
     await postToStorage(upload, file, (pct) =>
-      toast.loading(fmt(s.upload.progress, { name: file.name }), { id, description: <ProgressBar value={pct} /> }),
+      toast.loading(fmt(s.upload.progress, { name: file.name }), { id, description: <ProgressBar value={pct} label={`${pct} %`} /> }),
     );
     toast.loading(fmt(s.upload.verifying, { name: file.name }), { id, description: <ProgressBar value={100} /> });
     const { document } = await api<{ document: DocumentDto }>(`/api/documents/${uploadId}/finalize`, {
       method: "POST",
       json: opts.replaceId ? { replaceId: opts.replaceId } : {},
     });
-    toast.success(fmt(opts.replaceId ? s.upload.replaced : s.upload.done, { name: document.name }), { id, description: undefined });
+    const saved = original.size - file.size;
+    toast.success(fmt(opts.replaceId ? s.upload.replaced : s.upload.done, { name: document.name }), {
+      id,
+      description: saved > 0 ? fmt(s.upload.saved, { from: formatBytes(original.size) ?? "", to: formatBytes(file.size) ?? "", pct: Math.round((saved / original.size) * 100) }) : undefined,
+    });
   } catch (e) {
     fail(uploadError(e));
   } finally {

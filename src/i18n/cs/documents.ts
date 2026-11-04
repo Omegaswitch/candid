@@ -53,6 +53,8 @@ export const documents: Localized<typeof import("../en/documents").documents> = 
     invalid: "Zadejte webovou adresu začínající http:// nebo https://",
   },
   upload: {
+    compressing: "Komprimuji {name}",
+    saved: "Zmenšeno {from} → {to} (−{pct} %)",
     progress: "Nahrávání: {name}",
     verifying: "Kontrola: {name}…",
     done: "Nahráno: {name}",

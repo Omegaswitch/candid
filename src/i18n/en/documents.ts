@@ -52,6 +52,8 @@ export const documents = {
     invalid: "Use a web address that starts with http:// or https://",
   },
   upload: {
+    compressing: "Compressing {name}",
+    saved: "Compressed {from} → {to} (−{pct} %)",
     progress: "Uploading {name}",
     verifying: "Checking {name}…",
     done: "{name} uploaded",
