@@ -1,6 +1,12 @@
 export const common = {
   appName: "Candid",
   tagline: "Projects, checklists, notes and documents for the team.",
+  landing: {
+    point1: "Every project starts with the same checklist.",
+    point2: "Tick a step and the ring fills up.",
+    point3: "See what is due, waiting or late at a glance.",
+    footer: "Internal tool. Sign in with your work email.",
+  },
   save: "Save",
   saving: "Saving…",
   saved: "Saved",

@@ -26,6 +26,7 @@ export const projects = {
   progress: "{done} of {total} completed",
   noTasks: "No tasks yet",
   next: "Next",
+  statusLabel: "Status and owner",
   dueLabel: "Due",
   progressLabel: "Progress",
   completedShort: "done",

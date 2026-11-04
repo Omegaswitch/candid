@@ -5,6 +5,12 @@ import type { Localized } from "./types";
 export const common: Localized<typeof import("../en/common").common> = {
   appName: "Candid",
   tagline: "Projekty, kontrolní seznamy, poznámky a\u00a0dokumenty pro tým.",
+  landing: {
+    point1: "Každý projekt začíná stejným kontrolním seznamem.",
+    point2: "Odškrtněte krok a\u00a0kruh se zaplní.",
+    point3: "Na první pohled uvidíte, co se blíží, čeká nebo je po termínu.",
+    footer: "Interní nástroj. Přihlaste se pracovním e-mailem.",
+  },
   save: "Uložit",
   saving: "Ukládání…",
   saved: "Uloženo",

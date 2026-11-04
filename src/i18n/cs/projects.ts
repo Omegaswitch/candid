@@ -26,6 +26,7 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
   progress: "Hotovo {done} z\u00a0{total}",
   noTasks: "Zatím žádné úkoly",
   next: "Další",
+  statusLabel: "Stav a vlastník",
   dueLabel: "Termín",
   progressLabel: "Průběh",
   completedShort: "hotovo",

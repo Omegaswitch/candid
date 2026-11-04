@@ -176,12 +176,15 @@ export const ProjectCard = memo(function ProjectCard({
           <dt className="text-xs text-muted-foreground">{t.projects.progressLabel}</dt>
           <dd className="num">{p.taskCount ? fmt(t.projects.progress, { done: p.doneCount, total: p.taskCount }) : t.projects.noTasks}</dd>
         </div>
-        <div className="flex min-w-0 items-end justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <StatusPill status={p.status} />
-            {p.priority === "high" && <HighPriority />}
-          </div>
-          <Initials name={ownerName} />
+        <div className="min-w-0">
+          <dt className="sr-only">{t.projects.statusLabel}</dt>
+          <dd className="flex min-w-0 items-end justify-between gap-2">
+            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <StatusPill status={p.status} />
+              {p.priority === "high" && <HighPriority />}
+            </span>
+            <Initials name={ownerName} />
+          </dd>
         </div>
       </dl>
     </div>
