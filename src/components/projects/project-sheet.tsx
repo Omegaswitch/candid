@@ -10,7 +10,8 @@ export function ProjectSheet({ projectId, onClose }: { projectId: string | null;
   const projects = useProjects();
   const name = projects.data?.find((p) => p.id === projectId)?.name ?? t.projects.panelTitle;
   return (
-    <Sheet open={!!projectId} onOpenChange={(open) => !open && onClose()}>
+    // Non-modal: no dimming overlay, so the list stays readable beside the panel; Escape and an outside click close it.
+    <Sheet modal={false} open={!!projectId} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" aria-describedby={undefined} className="w-full gap-0 overflow-y-auto p-0 sm:max-w-[560px] data-[side=right]:w-full data-[side=right]:sm:max-w-[560px]">
         <SheetTitle className="sr-only">{name}</SheetTitle>
         {projectId && <ProjectPanel key={projectId} projectId={projectId} onClose={onClose} />}

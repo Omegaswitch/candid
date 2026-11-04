@@ -1,0 +1,334 @@
+"use client";
+
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type Announcements,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
+import Counter from "@/components/Counter";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCounts, useMembers, usePrefs, useProjects, useSavePrefs } from "@/hooks/queries";
+import { useReorderProjects, useSetArchived, useSetPinned } from "@/hooks/projects";
+import { fmt, plural, t } from "@/i18n";
+import { addDaysIso, todayLocal } from "@/lib/dates";
+import { cn } from "@/lib/utils";
+import type { Prefs } from "@/server/preferences";
+import type { ProjectSummary } from "@/server/projects";
+import { DuplicateDialog } from "./duplicate-dialog";
+import { type CardActions, ProjectCard } from "./project-card";
+import { activeFilterCount, type Filters, ProjectToolbar } from "./project-filters";
+import { ProjectSheet } from "./project-sheet";
+import { ProjectTable } from "./project-table";
+
+const DEFAULT_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null };
+
+function matchesDue(p: ProjectSummary, due: Filters["due"], today: string) {
+  if (!due) return true;
+  if (due === "none") return !p.dueDate;
+  if (!p.dueDate) return false;
+  if (due === "overdue") return p.dueDate < today && p.status !== "completed";
+  if (due === "week") return p.dueDate >= today && p.dueDate <= addDaysIso(today, 7);
+  return p.dueDate >= today && p.dueDate.slice(0, 7) === today.slice(0, 7);
+}
+
+const byName = (a: ProjectSummary, b: ProjectSummary) => a.name.localeCompare(b.name);
+const SORTS: Record<Prefs["sort"], (a: ProjectSummary, b: ProjectSummary) => number> = {
+  manual: (a, b) => a.position - b.position,
+  due: (a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999") || byName(a, b),
+  name: byName,
+  activity: (a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt),
+};
+
+/** The project id in `/projects/<id>`, the shareable address of an open panel. */
+function useOpenProjectId() {
+  const pathname = usePathname();
+  const m = pathname.match(/^\/projects\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
+export function Dashboard() {
+  const projects = useProjects();
+  const counts = useCounts();
+  const members = useMembers();
+  const prefs = usePrefs();
+  const savePrefs = useSavePrefs();
+  const reorder = useReorderProjects();
+  const setPinned = useSetPinned();
+  const setArchived = useSetArchived();
+  const openId = useOpenProjectId();
+  const [duplicating, setDuplicating] = useState<ProjectSummary | null>(null);
+  const today = todayLocal();
+
+  const view = prefs.data?.view ?? "grid";
+  const sort = prefs.data?.sort ?? "manual";
+  const filters = prefs.data?.filters ?? DEFAULT_FILTERS;
+  const filtered = activeFilterCount(filters) > 0;
+
+  const memberName = useMemo(() => new Map((members.data ?? []).map((m) => [m.id, m.name])), [members.data]);
+  const ownerName = useCallback((id: string | null) => (id ? (memberName.get(id) ?? null) : null), [memberName]);
+
+  const all = projects.data;
+  const shown = useMemo(() => {
+    if (!all) return [];
+    const list = all.filter(
+      (p) =>
+        (!filters.ownerId || p.ownerId === filters.ownerId) &&
+        (!filters.status || p.status === filters.status) &&
+        (!filters.priority || p.priority === filters.priority) &&
+        matchesDue(p, filters.due, today),
+    );
+    return list.sort(SORTS[sort]);
+  }, [all, filters, sort, today]);
+
+  const finding = useMemo(() => {
+    if (!all) return null;
+    if (!all.length) return t.projects.findingEmpty;
+    const late = all.filter((p) => p.overdueCount > 0);
+    const lateTasks = late.reduce((s, p) => s + p.overdueCount, 0);
+    if (lateTasks)
+      return fmt(t.projects.findingOverdue, { tasks: plural(lateTasks, t.projects.tasksN), projects: plural(late.length, t.projects.projectsN) });
+    const week = counts.data?.dueThisWeek ?? 0;
+    return week ? fmt(t.projects.findingDueSoon, { tasks: plural(week, t.projects.tasksN) }) : t.projects.findingClear;
+  }, [all, counts.data?.dueThisWeek]);
+
+  const canReorder = sort === "manual" && !filtered;
+
+  // URL is the source of truth for the panel: native history keeps the dashboard mounted.
+  const open = useCallback((id: string) => window.history.pushState(null, "", `/projects/${id}`), []);
+  const close = useCallback(() => window.history.replaceState(null, "", "/"), []);
+
+  const move = useCallback(
+    (id: string, delta: -1 | 1) => {
+      if (!all) return;
+      const ids = all.map((p) => p.id);
+      const from = ids.indexOf(id);
+      const to = from + delta;
+      if (from < 0 || to < 0 || to >= ids.length) return;
+      reorder.mutate(arrayMove(ids, from, to));
+    },
+    [all, reorder],
+  );
+
+  const actions: CardActions = useMemo(
+    () => ({
+      open,
+      pin: (p) => setPinned.mutate({ id: p.id, pinned: !p.pinned }),
+      duplicate: setDuplicating,
+      archive: (p) => {
+        if (openId === p.id) close();
+        setArchived.mutate({ id: p.id, archived: true, name: p.name });
+      },
+      move: canReorder ? move : undefined,
+    }),
+    // Mutation objects change identity every render; their `mutate` is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [open, close, openId, canReorder, move],
+  );
+
+  const setFilters = (f: Filters) => savePrefs.mutate({ filters: f });
+  const showActive = () => savePrefs.mutate({ filters: { ...DEFAULT_FILTERS, status: "active" } });
+  const activeCount = useMemo(() => all?.filter((p) => p.status === "active").length, [all]);
+
+  return (
+    <div className="mx-auto flex max-w-[1312px] flex-col gap-5">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight">{t.projects.title}</h1>
+          <div className="mt-1 min-h-5 text-sm text-muted-foreground">{finding ?? <Skeleton className="h-4 w-64" />}</div>
+        </div>
+        <div role="group" aria-label={t.projects.counts.label} className="-mx-2.5 grid grid-cols-3 sm:flex sm:gap-1">
+          <CountLink value={activeCount} label={t.projects.counts.active} onClick={showActive} title={t.projects.counts.activeHint} />
+          <CountLink value={counts.data?.overdue} label={t.projects.counts.overdue} href="/overdue" negative />
+          <CountLink value={counts.data?.dueThisWeek} label={t.projects.counts.dueWeek} href="/due-soon" />
+        </div>
+      </header>
+
+      <ProjectToolbar
+        filters={filters}
+        sort={sort}
+        view={view}
+        onFilters={setFilters}
+        onSort={(s) => savePrefs.mutate({ sort: s })}
+        onView={(v) => savePrefs.mutate({ view: v })}
+      />
+
+      {all && filtered && (
+        <p className="-mt-2 text-xs text-muted-foreground">
+          {fmt(t.projects.filters.showing, { shown: shown.length, total: all.length })}
+          {sort === "manual" && ` · ${t.projects.reorderOff}`}
+        </p>
+      )}
+
+      {projects.isError ? (
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4 text-sm">
+          <span>{t.projects.loadError}</span>
+          <Button variant="outline" size="sm" onClick={() => projects.refetch()}>
+            {t.common.retry}
+          </Button>
+        </div>
+      ) : !all ? (
+        <CardGrid>
+          {Array.from({ length: 6 }, (_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </CardGrid>
+      ) : shown.length === 0 ? (
+        <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+          {filtered ? (
+            <>
+              {t.projects.emptyFiltered}{" "}
+              <button className="font-medium text-foreground underline-offset-4 hover:underline" onClick={() => setFilters(DEFAULT_FILTERS)}>
+                {t.projects.filters.clear}
+              </button>
+            </>
+          ) : (
+            t.projects.empty
+          )}
+        </div>
+      ) : view === "table" ? (
+        <ProjectTable projects={shown} ownerName={ownerName} today={today} actions={actions} />
+      ) : canReorder ? (
+        <SortableGrid projects={shown} ownerName={ownerName} today={today} actions={actions} onReorder={(ids) => reorder.mutate(ids)} />
+      ) : (
+        <CardGrid>
+          {shown.map((p, i) => (
+            <ProjectCard key={p.id} p={p} ownerName={ownerName(p.ownerId)} today={today} actions={actions} index={i} count={shown.length} />
+          ))}
+        </CardGrid>
+      )}
+
+      <ProjectSheet projectId={openId} onClose={close} />
+      <DuplicateDialog project={duplicating} onClose={() => setDuplicating(null)} />
+    </div>
+  );
+}
+
+function CountLink({
+  value,
+  label,
+  href,
+  onClick,
+  title,
+  negative,
+}: {
+  value: number | undefined;
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  title?: string;
+  negative?: boolean;
+}) {
+  const body = (
+    <>
+      <span className={cn("num text-base font-semibold leading-none", negative && !!value && "text-negative")}>
+        {value === undefined ? <span className="inline-block h-4 w-4 rounded-md bg-muted align-middle" /> : <Counter value={value} fontSize="inherit" intro={false} motionBlur={false} fade={0} />}
+      </span>
+      <span className="text-[13px] text-muted-foreground">{label}</span>
+    </>
+  );
+  const cls =
+    "flex min-h-11 flex-col items-start justify-center gap-1 rounded-md px-2.5 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-9 sm:min-h-0 sm:flex-row sm:items-center sm:gap-1.5";
+  return href ? (
+    <Link href={href} className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} title={title} className={cls}>
+      {body}
+    </button>
+  );
+}
+
+function CardGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fill,minmax(272px,1fr))]">{children}</div>;
+}
+
+function CardSkeleton() {
+  return (
+    <div className="flex h-[178px] flex-col gap-3 rounded-lg border bg-card p-4" aria-hidden>
+      <Skeleton className="h-5 w-2/3" />
+      <Skeleton className="-mt-1.5 h-4 w-1/3" />
+      <Skeleton className="mt-1 h-1.5 w-full" />
+      <Skeleton className="h-3 w-1/2" />
+      <Skeleton className="h-4 w-3/4" />
+      <div className="mt-auto flex justify-between">
+        <Skeleton className="h-5 w-16 rounded-full" />
+        <Skeleton className="size-6 rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function SortableCard(props: Omit<React.ComponentProps<typeof ProjectCard>, "drag">) {
+  const s = useSortable({ id: props.p.id });
+  return (
+    <ProjectCard
+      {...props}
+      drag={{
+        ref: s.setNodeRef,
+        style: { transform: CSS.Translate.toString(s.transform), transition: s.transition },
+        dragging: s.isDragging,
+        handle: { ref: s.setActivatorNodeRef, ...s.attributes, ...s.listeners },
+      }}
+    />
+  );
+}
+
+function SortableGrid({
+  projects,
+  ownerName,
+  today,
+  actions,
+  onReorder,
+}: {
+  projects: ProjectSummary[];
+  ownerName: (id: string | null) => string | null;
+  today: string;
+  actions: CardActions;
+  onReorder: (ids: string[]) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const ids = useMemo(() => projects.map((p) => p.id), [projects]);
+  const nameOf = (id: string | number) => projects.find((p) => p.id === id)?.name ?? "";
+  const pos = (id: string | number | undefined) => ids.indexOf(String(id)) + 1;
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => fmt(t.projects.dragStart, { name: nameOf(active.id) }),
+    onDragOver: ({ active, over }) => (over ? fmt(t.projects.dragOver, { name: nameOf(active.id), position: pos(over.id), total: ids.length }) : undefined),
+    onDragEnd: ({ active, over }) => fmt(t.projects.dragEnd, { name: nameOf(active.id), position: pos(over?.id ?? active.id), total: ids.length }),
+    onDragCancel: ({ active }) => fmt(t.projects.dragCancel, { name: nameOf(active.id) }),
+  };
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    onReorder(arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id))));
+  };
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={onDragEnd}
+      accessibility={{ announcements, screenReaderInstructions: { draggable: t.projects.reorderHint } }}
+    >
+      <SortableContext items={ids} strategy={rectSortingStrategy}>
+        <CardGrid>
+          {projects.map((p, i) => (
+            <SortableCard key={p.id} p={p} ownerName={ownerName(p.ownerId)} today={today} actions={actions} index={i} count={projects.length} />
+          ))}
+        </CardGrid>
+      </SortableContext>
+    </DndContext>
+  );
+}

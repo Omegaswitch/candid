@@ -22,12 +22,12 @@ export function ProjectTable({
       <table className="w-full table-fixed text-sm">
         <thead className="hidden text-left text-xs text-muted-foreground sm:table-header-group">
           <tr className="h-9 border-b">
-            <th className="w-[34%] pl-4 font-normal">{t.projects.table.name}</th>
-            <th className="w-[13%] font-normal">{t.projects.table.status}</th>
-            <th className="w-[19%] font-normal">{t.projects.table.progress}</th>
+            <th className="w-[34%] xl:w-[27%] pl-4 font-normal">{t.projects.table.name}</th>
+            <th className="w-[13%] xl:w-[11%] font-normal">{t.projects.table.status}</th>
+            <th className="w-[19%] xl:w-[15%] font-normal">{t.projects.table.progress}</th>
             <th className="hidden font-normal xl:table-cell">{t.projects.table.next}</th>
-            <th className="w-[12%] font-normal">{t.projects.table.owner}</th>
-            <th className="w-[13%] pr-2 text-right font-normal">{t.projects.table.due}</th>
+            <th className="w-[14%] xl:w-[12%] font-normal">{t.projects.table.owner}</th>
+            <th className="w-[13%] xl:w-[11%] pr-2 text-right font-normal">{t.projects.table.due}</th>
             <th className="w-11" aria-label={t.projects.menu.open} />
           </tr>
         </thead>

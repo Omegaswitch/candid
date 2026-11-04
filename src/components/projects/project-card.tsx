@@ -130,7 +130,7 @@ export const ProjectCard = memo(function ProjectCard({
               ref={handleRef}
               variant="ghost"
               size="icon-sm"
-              className="relative z-10 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+              className="relative z-10 cursor-grab touch-none text-muted-foreground active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
               aria-label={fmt(t.projects.dragHandle, { name: p.name })}
               {...handleProps}
             >

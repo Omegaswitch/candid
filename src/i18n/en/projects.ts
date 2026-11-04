@@ -124,7 +124,6 @@ export const projects = {
   create: {
     title: "Add project",
     name: "Name",
-    namePlaceholder: "Warehouse forklift drivers",
     client: "Client",
     owner: "Owner",
     due: "Due date",

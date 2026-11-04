@@ -1,4 +1,5 @@
-// STUB — replaced by the projects dashboard.
+import { Dashboard } from "@/components/projects/dashboard";
+
 export default function DashboardPage() {
-  return <h1 className="text-2xl font-semibold">All projects</h1>;
+  return <Dashboard />;
 }

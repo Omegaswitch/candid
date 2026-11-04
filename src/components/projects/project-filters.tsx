@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useMembers } from "@/hooks/queries";
-import { plural, t } from "@/i18n";
+import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { Prefs } from "@/server/preferences";
 
@@ -191,4 +191,3 @@ export function ProjectToolbar({
   );
 }
 
-export const filterCountLabel = (n: number) => plural(n, f.countN);
