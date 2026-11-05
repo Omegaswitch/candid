@@ -12,6 +12,11 @@ export const search = {
   retry: "Retry",
   archived: "Archived",
   done: "Done",
+  filters: { client: "Client", label: "Label", overdue: "Overdue" },
+  types: { project: "Projects", task: "Tasks", document: "Documents" },
+  more: "More matches – refine the search",
+  syntaxHint: "Filters: client:Name · label:Name · type:project|task|document · overdue",
+  inProject: "in {project}",
   groups: { projects: "Projects", tasks: "Tasks", documents: "Documents", navigation: "Navigation", actions: "Actions" },
   nav: {
     allProjects: "All projects",

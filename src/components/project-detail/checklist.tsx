@@ -3,7 +3,7 @@
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ChevronRight, Plus } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { usePrefs, useMembers, useSavePrefs } from "@/hooks/queries";
 import { errorText, useTaskActions, type TaskRow as Task } from "@/hooks/project-detail";
 import { fmt, plural, t } from "@/i18n";
+import { isPlainShortcut } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 import { useEscapeCancel } from "./inline-text";
 import { TaskRow } from "./task-row";
@@ -40,6 +41,17 @@ function AddTask({ onAdd }: { onAdd: (title: string) => Promise<unknown> }) {
   const [text, setText] = useState("");
   const ref = useRef<HTMLInputElement>(null);
   useEscapeCancel(ref, !!text, () => setText(""));
+  // T: jump to "add a step" in the open project panel.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isPlainShortcut(e, "t", "[role=dialog]") || !ref.current) return;
+      e.preventDefault();
+      ref.current.focus();
+      ref.current.scrollIntoView({ block: "nearest" });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const submit = () => {
     const title = text.trim();
     if (!title) return;

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMembers } from "@/hooks/queries";
 import { useCreateProject, useTemplates } from "@/hooks/projects";
 import { fmt, plural, t } from "@/i18n";
+import { isPlainShortcut } from "@/lib/keyboard";
 
 const c = t.projects.create;
 const NONE = "none";
@@ -20,6 +21,16 @@ const NONE = "none";
 /** Top-bar primary: "Add project". Also opens from `/?new=1` (the command menu). */
 export function NewProjectButton() {
   const [open, setOpen] = useState(false);
+  // N: new project, unless typing or another dialog is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isPlainShortcut(e, "n") || document.querySelector("[role=dialog],[role=alertdialog]")) return;
+      e.preventDefault();
+      setOpen(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   return (
     <>
       <Button onClick={() => setOpen(true)} className="ml-1 h-8 px-2 sm:px-3" aria-label={c.title}>

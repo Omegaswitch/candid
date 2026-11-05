@@ -14,6 +14,11 @@ export const search: Localized<typeof import("../en/search").search> = {
   retry: "Zkusit znovu",
   archived: "Archivováno",
   done: "Hotovo",
+  filters: { client: "Klient", label: "Štítek", overdue: "Po termínu" },
+  types: { project: "Projekty", task: "Úkoly", document: "Dokumenty" },
+  more: "Další výsledky – upřesněte hledání",
+  syntaxHint: "Filtry: klient:Název · štítek:Název · typ:projekt|úkol|dokument · po\u00a0termínu",
+  inProject: "v\u00a0projektu {project}",
   groups: { projects: "Projekty", tasks: "Úkoly", documents: "Dokumenty", navigation: "Navigace", actions: "Akce" },
   nav: {
     allProjects: "Všechny projekty",

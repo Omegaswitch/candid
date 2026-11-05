@@ -30,6 +30,7 @@ import { type CardActions, ProjectCard } from "./project-card";
 import { activeFilterCount, type Filters, ProjectToolbar } from "./project-filters";
 import { ProjectSheet } from "./project-sheet";
 import { ProjectTable } from "./project-table";
+import { ProjectBoard } from "./project-board";
 import { setViewIds } from "@/lib/view-context";
 import dynamic from "next/dynamic";
 
@@ -241,6 +242,8 @@ export function Dashboard() {
             <ExportDialog open onOpenChange={(o) => !o && setExportingSelected(false)} preset={{ scope: "selected", projectIds: [...selected] }} />
           )}
         </>
+      ) : view === "board" ? (
+        <ProjectBoard projects={shown} today={today} actions={actions} />
       ) : canReorder ? (
         <SortableGrid projects={shown} ownerName={ownerName} today={today} actions={actions} onReorder={(ids) => reorder.mutate(ids)} />
       ) : (

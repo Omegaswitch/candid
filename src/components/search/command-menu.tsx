@@ -23,14 +23,16 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommandDialog, Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { fmt, t } from "@/i18n";
 import { api } from "@/lib/api";
+import { formatDay, todayLocal } from "@/lib/dates";
+import { highlight } from "@/lib/search-query";
 import { isTypingTarget } from "@/lib/keyboard";
-import type { SearchResults } from "@/server/search";
+import type { SearchResults, Snippet } from "@/server/search";
 
 // A lazy view of the active locale (see src/i18n/index.ts), safe at module level.
 const s = t.search;
@@ -94,7 +96,8 @@ export function CommandMenu() {
 
   const results = useQuery({
     queryKey: ["search", debounced],
-    queryFn: ({ signal }) => api<SearchResults>(`/api/search?q=${encodeURIComponent(debounced)}`, { signal }),
+    queryFn: ({ signal }) =>
+      api<SearchResults>(`/api/search?q=${encodeURIComponent(debounced)}&today=${todayLocal()}`, { signal }),
     enabled: open && debounced.length > 0,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
@@ -117,6 +120,8 @@ export function CommandMenu() {
   const nav = term ? NAVIGATION.filter((e) => fold(e.label).includes(f)) : NAVIGATION;
   const actions = term ? ACTIONS.filter((e) => fold(e.label).includes(f)) : ACTIONS;
   const data = term ? results.data : undefined;
+  const terms = data?.query.terms ?? [];
+  const hl = (text: string) => <Highlighted text={text} terms={terms} />;
   const serverCount = data ? data.projects.length + data.tasks.length + data.documents.length : 0;
   const pending = !!term && (term !== debounced || results.isFetching);
   const showEmpty = !!term && !pending && !results.isError && serverCount === 0 && nav.length === 0 && actions.length === 0;
@@ -162,20 +167,29 @@ export function CommandMenu() {
                 </Button>
               </div>
             )}
+            {data && <QueryChips query={data.query} />}
             {showEmpty && <Status>{fmt(s.noMatches, { q: term })}</Status>}
 
             {!!data?.projects.length && (
               <CommandGroup heading={s.groups.projects}>
                 {data.projects.map((p) => (
                   <CommandItem key={p.id} value={`project:${p.id}`} onSelect={() => go(`/projects/${p.id}`)}>
-                    <FolderKanban strokeWidth={1.6} className="text-muted-foreground" />
-                    <span className="truncate">{p.name}</span>
-                    {p.client && <span className="truncate text-xs text-muted-foreground">{p.client}</span>}
+                    <FolderKanban strokeWidth={1.6} className="self-start text-muted-foreground" />
+                    <ResultBody snippet={p.snippet} terms={terms}>
+                      <span className="truncate">{hl(p.name)}</span>
+                      {p.client && <span className="truncate text-xs text-muted-foreground">{hl(p.client)}</span>}
+                      {p.labels.map((l) => (
+                        <span key={l.name} className="shrink-0 rounded-sm bg-pill-neutral px-1.5 text-xs leading-5 text-pill-neutral-ink">
+                          {hl(l.name)}
+                        </span>
+                      ))}
+                    </ResultBody>
                     {p.archived && (
-                      <span className="ml-auto shrink-0 rounded-sm bg-pill-neutral px-1.5 text-xs leading-5 text-pill-neutral-ink">{s.archived}</span>
+                      <span className="ml-auto shrink-0 self-start rounded-sm bg-pill-neutral px-1.5 text-xs leading-5 text-pill-neutral-ink">{s.archived}</span>
                     )}
                   </CommandItem>
                 ))}
+                {data.more.includes("project") && <More />}
               </CommandGroup>
             )}
             {!!data?.tasks.length && (
@@ -183,29 +197,40 @@ export function CommandMenu() {
                 {data.tasks.map((t) => (
                   <CommandItem key={t.id} value={`task:${t.id}`} onSelect={() => go(`/projects/${t.projectId}`)}>
                     {t.done ? (
-                      <CircleCheck strokeWidth={1.6} className="text-positive" aria-label={s.done} />
+                      <CircleCheck strokeWidth={1.6} className="self-start text-positive" aria-label={s.done} />
                     ) : (
-                      <Circle strokeWidth={1.6} className="text-muted-foreground" aria-hidden />
+                      <Circle strokeWidth={1.6} className="self-start text-muted-foreground" aria-hidden />
                     )}
-                    <span className={t.done ? "truncate text-muted-foreground line-through" : "truncate"}>{t.title}</span>
-                    <span className="ml-auto max-w-[40%] shrink-0 truncate text-xs text-muted-foreground">{t.projectName}</span>
+                    <ResultBody snippet={t.snippet} terms={terms}>
+                      <span className={t.done ? "truncate text-muted-foreground line-through" : "truncate"}>{hl(t.title)}</span>
+                      {t.dueDate && data.query.overdue && <span className="shrink-0 text-xs text-negative">{formatDay(t.dueDate)}</span>}
+                    </ResultBody>
+                    <span className="ml-auto max-w-[40%] shrink-0 self-start truncate text-xs text-muted-foreground">{t.projectName}</span>
                   </CommandItem>
                 ))}
+                {data.more.includes("task") && <More />}
               </CommandGroup>
             )}
             {!!data?.documents.length && (
               <CommandGroup heading={s.groups.documents}>
                 {data.documents.map((d) => (
                   <CommandItem key={d.id} value={`document:${d.id}`} onSelect={() => go(`/documents?open=${d.id}`)}>
-                    <FileText strokeWidth={1.6} className="text-muted-foreground" />
-                    <span className="truncate">{d.name}</span>
+                    <FileText strokeWidth={1.6} className="self-start text-muted-foreground" />
+                    <ResultBody snippet={d.snippet} terms={terms}>
+                      <span className="truncate">{hl(d.name)}</span>
+                    </ResultBody>
+                    {d.projectName && (
+                      <span className="ml-auto max-w-[40%] shrink-0 self-start truncate text-xs text-muted-foreground">{d.projectName}</span>
+                    )}
                   </CommandItem>
                 ))}
+                {data.more.includes("document") && <More />}
               </CommandGroup>
             )}
 
             <StaticGroup heading={s.groups.navigation} entries={nav} onRun={run} />
             <StaticGroup heading={s.groups.actions} entries={actions} onRun={run} />
+            {!term && <p className="px-3 pt-1 pb-2 text-xs text-muted-foreground">{s.syntaxHint}</p>}
           </CommandList>
         </Command>
       </CommandDialog>
@@ -233,4 +258,61 @@ function Status({ children }: { children: string }) {
       {children}
     </p>
   );
+}
+
+/** Matching parts of `text` (accent/case-insensitive, same folding as the server) in <mark>. */
+function Highlighted({ text, terms }: { text: string; terms: string[] }) {
+  if (!terms.length) return <>{text}</>;
+  return (
+    <>
+      {highlight(text, terms).map((seg, i) =>
+        seg.match ? (
+          <mark key={i} className="rounded-[2px] bg-pill-warning px-px text-pill-warning-ink">
+            {seg.text}
+          </mark>
+        ) : (
+          seg.text
+        ),
+      )}
+    </>
+  );
+}
+
+/** Title row plus, when the match is in notes or PDF text, a snippet around it. */
+function ResultBody({ children, snippet, terms }: { children: ReactNode; snippet: Snippet | null; terms: string[] }) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 items-center gap-2">{children}</div>
+      {snippet && (
+        <p className="line-clamp-2 text-xs leading-snug break-words text-muted-foreground">
+          {snippet.before && "…"}
+          <Highlighted text={snippet.text} terms={terms} />
+          {snippet.after && "…"}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function QueryChips({ query }: { query: SearchResults["query"] }) {
+  const chips = [
+    query.client && `${s.filters.client}: ${query.client}`,
+    query.label && `${s.filters.label}: ${query.label}`,
+    ...query.types.map((t) => s.types[t]),
+    query.overdue && s.filters.overdue,
+  ].filter(Boolean) as string[];
+  if (!chips.length) return null;
+  return (
+    <div className="flex flex-wrap gap-1 px-2 pt-2 pb-1">
+      {chips.map((c) => (
+        <span key={c} className="rounded-sm bg-pill-neutral px-1.5 text-xs leading-5 text-pill-neutral-ink">
+          {c}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function More() {
+  return <p className="px-2 py-1 text-xs text-muted-foreground">{s.more}</p>;
 }
