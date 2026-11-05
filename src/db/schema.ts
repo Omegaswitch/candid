@@ -72,6 +72,10 @@ export const projects = pgTable(
     priority: priorityEnum("priority").notNull().default("normal"),
     dueDate: day("due_date"),
     notes: text("notes").notNull().default(""),
+    // Client contact person (optional), shown as a contact card in the project panel.
+    contactName: text("contact_name"),
+    contactEmail: text("contact_email"),
+    contactPhone: text("contact_phone"),
     // Notes have their own version so a metadata edit never conflicts with someone typing notes.
     notesVersion: integer("notes_version").notNull().default(1),
     position: doublePrecision("position").notNull().default(0),
@@ -137,6 +141,9 @@ export const documents = pgTable(
     sizeBytes: integer("size_bytes"),
     // Uploads are pending until the server has verified the stored object.
     uploadedAt: ts("uploaded_at"),
+    // Plain text extracted from PDFs at upload, for full-text search. Null = not extracted (yet).
+    contentText: text("content_text"),
+    textExtractedAt: ts("text_extracted_at"),
     position: doublePrecision("position").notNull().default(0),
     version: integer("version").notNull().default(1),
     createdBy: uuid("created_by").references(() => memberships.id, { onDelete: "set null" }),
@@ -149,6 +156,28 @@ export const documents = pgTable(
     index("documents_project_idx").on(t.projectId),
     uniqueIndex("documents_storage_key_uq").on(t.storageKey),
   ],
+);
+
+// Workspace-wide labels for grouping projects ("Stavebnictví", "Urgentní" …).
+export const labels = pgTable(
+  "labels",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color").notNull().default("neutral"), // a palette key, never raw CSS
+    createdAt: created(),
+  },
+  (t) => [uniqueIndex("labels_ws_name_uq").on(t.workspaceId, t.name)],
+);
+
+export const projectLabels = pgTable(
+  "project_labels",
+  {
+    projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    labelId: uuid("label_id").notNull().references(() => labels.id, { onDelete: "cascade" }),
+  },
+  (t) => [uniqueIndex("project_labels_pk").on(t.projectId, t.labelId), index("project_labels_label_idx").on(t.labelId)],
 );
 
 export const projectTemplates = pgTable(
