@@ -113,7 +113,7 @@ export async function search(ctx: Ctx, raw: string, opts: { today?: string } = {
         archivedAt: projects.archivedAt,
         labels: sql<SearchLabel[]>`coalesce((select json_agg(json_build_object('name', l.name, 'color', l.color) order by l.name)
           from ${projectLabels} pl join ${labels} l on l.id = pl.label_id and l.workspace_id = ${ws}
-          where pl.project_id = ${projects.id}), '[]'::json)`,
+          where pl.project_id = "projects"."id"), '[]'::json)`, // qualified by hand: drizzle drops the table name in a single-table select, and a bare "id" would bind to labels.id
         snipPos: snip.pos,
         snipText: snip.text,
         snipLen: snip.len,

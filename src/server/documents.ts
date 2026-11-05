@@ -99,7 +99,7 @@ export function magicMatches(type: FileType, head: Uint8Array) {
 // ---------------------------------------------------------------- reads
 
 /** Every column except the (large) extracted text, which only search reads. */
-const { contentText: _contentText, ...docColumns } = getTableColumns(documents);
+const docColumns = (({ contentText, ...rest }) => (void contentText, rest))(getTableColumns(documents));
 type DocumentRow = Omit<Document, "contentText">;
 
 function toDto(d: DocumentRow, extra: { pinned: boolean; projectName: string | null }): DocumentDto {

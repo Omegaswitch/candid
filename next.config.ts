@@ -27,6 +27,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // PDF text extraction (pdf.js inside unpdf) loads its own modules at runtime; keep it unbundled.
+  serverExternalPackages: ["unpdf"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

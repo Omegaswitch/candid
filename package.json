@@ -13,7 +13,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "db:seed:large": "tsx scripts/seed-large.ts",
-    "db:migrate:http": "tsx scripts/migrate-http.mts"
+    "db:migrate:http": "tsx scripts/migrate-http.mts",
+    "db:backfill-pdf-text": "tsx --conditions=react-server scripts/backfill-pdf-text.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",
