@@ -15,9 +15,9 @@ import type { ProjectSummary } from "@/server/projects";
 type Wire<T> = { [K in keyof T]: T[K] extends Date ? string : T[K] extends Date | null ? string | null : T[K] };
 export type ProjectRow = Wire<Project>;
 export type TaskRow = Wire<Task>;
-export type ProjectDetail = { project: ProjectRow; tasks: TaskRow[]; pinned: boolean };
+export type ProjectDetail = { project: ProjectRow; tasks: TaskRow[]; pinned: boolean; labelIds: string[] };
 export type TaskPatch = Partial<Pick<TaskRow, "title" | "done" | "assigneeId" | "dueDate" | "note" | "waiting" | "waitingReason">>;
-export type ProjectPatch = Partial<Pick<ProjectRow, "name" | "client" | "ownerId" | "status" | "priority" | "dueDate">>;
+export type ProjectPatch = Partial<Pick<ProjectRow, "name" | "client" | "ownerId" | "status" | "priority" | "dueDate" | "contactName" | "contactEmail" | "contactPhone">>;
 
 export function useProject(id: string) {
   return useQuery({ queryKey: qk.project(id), queryFn: () => api<ProjectDetail>(`/api/projects/${id}`) });

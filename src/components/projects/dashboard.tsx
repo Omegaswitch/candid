@@ -35,7 +35,7 @@ import dynamic from "next/dynamic";
 
 const ExportDialog = dynamic(() => import("@/components/import-export/export-dialog").then((m) => m.ExportDialog), { ssr: false });
 
-const DEFAULT_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null };
+const DEFAULT_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null, labelId: null };
 
 function matchesDue(p: ProjectSummary, due: Filters["due"], today: string) {
   if (!due) return true;
@@ -90,6 +90,7 @@ export function Dashboard() {
         (!filters.ownerId || p.ownerId === filters.ownerId) &&
         (!filters.status || p.status === filters.status) &&
         (!filters.priority || p.priority === filters.priority) &&
+        (!filters.labelId || p.labels.some((l) => l.id === filters.labelId)) &&
         matchesDue(p, filters.due, today),
     );
     return list.sort(SORTS[sort]);

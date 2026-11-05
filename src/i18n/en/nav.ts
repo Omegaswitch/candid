@@ -3,6 +3,7 @@ export const nav = {
   myTasks: "My tasks",
   dueSoon: "Due soon",
   overdue: "Overdue",
+  analytics: "Analytics",
   waiting: "Waiting",
   archive: "Archive",
   pinned: "Pinned projects",

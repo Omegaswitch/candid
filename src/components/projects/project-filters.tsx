@@ -1,12 +1,13 @@
 "use client";
 
-import { LayoutGrid, ListFilter, Rows3 } from "lucide-react";
+import { Columns3, LayoutGrid, ListFilter, Rows3 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useLabels } from "@/hooks/labels";
 import { useMembers } from "@/hooks/queries";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,7 @@ export const activeFilterCount = (fl: Filters) => Object.values(fl).filter((v) =
 
 function FilterFields({ filters, onChange, wide }: { filters: Filters; onChange: (f: Filters) => void; wide?: boolean }) {
   const members = useMembers();
+  const labels = useLabels();
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => onChange({ ...filters, [k]: v });
   return (
     <>
@@ -91,6 +93,15 @@ function FilterFields({ filters, onChange, wide }: { filters: Filters; onChange:
         onChange={(v) => set("priority", v)}
         options={(["high", "normal"] as const).map((p) => ({ value: p, label: t.projects.priority[p] }))}
       />
+      {!!labels.data?.length && (
+        <FilterSelect
+          label={f.tag}
+          wide={wide}
+          value={filters.labelId}
+          onChange={(v) => set("labelId", v)}
+          options={labels.data.map((l) => ({ value: l.id, label: l.name }))}
+        />
+      )}
     </>
   );
 }
@@ -112,7 +123,7 @@ export function ProjectToolbar({
 }) {
   const [sheet, setSheet] = useState(false);
   const n = activeFilterCount(filters);
-  const clear = () => onFilters({ ownerId: null, status: null, priority: null, due: null });
+  const clear = () => onFilters({ ownerId: null, status: null, priority: null, due: null, labelId: null });
 
   return (
     <div className="flex items-center gap-2">
@@ -184,6 +195,9 @@ export function ProjectToolbar({
           </ToggleGroupItem>
           <ToggleGroupItem value="table" aria-label={t.projects.view.table}>
             <Rows3 />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="board" aria-label={t.projects.view.board}>
+            <Columns3 />
           </ToggleGroupItem>
         </ToggleGroup>
       </div>

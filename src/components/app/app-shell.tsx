@@ -3,6 +3,7 @@
 import {
   Archive,
   CalendarClock,
+  ChartNoAxesColumn,
   CircleAlert,
   CircleHelp,
   Trash2,
@@ -42,6 +43,7 @@ const NAV: NavItem[] = [
   { href: "/due-soon", get label() { return t.nav.dueSoon; }, icon: CalendarClock, count: "dueThisWeek" },
   { href: "/overdue", get label() { return t.nav.overdue; }, icon: CircleAlert, count: "overdue" },
   { href: "/waiting", get label() { return t.nav.waiting; }, icon: Hourglass, count: "waiting" },
+  { href: "/analytics", get label() { return t.nav.analytics; }, icon: ChartNoAxesColumn },
   { href: "/archive", get label() { return t.nav.archive; }, icon: Archive },
   { href: "/trash", get label() { return t.nav.trash; }, icon: Trash2 },
 ];

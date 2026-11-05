@@ -5,6 +5,7 @@ export const nav: Localized<typeof import("../en/nav").nav> = {
   myTasks: "Moje úkoly",
   dueSoon: "Brzy splatné",
   overdue: "Po termínu",
+  analytics: "Přehledy",
   waiting: "Čeká se",
   archive: "Archiv",
   pinned: "Připnuté projekty",

@@ -7,6 +7,8 @@ import { useProject, useProjectActions } from "@/hooks/project-detail";
 import { t } from "@/i18n";
 import { ApiError } from "@/lib/api";
 import { Checklist } from "./checklist";
+import { ContactCard } from "./contact";
+import { ProjectLabels } from "./labels";
 import { History } from "./history";
 import { ProjectNotes } from "./notes";
 import { PanelHeader } from "./panel-header";
@@ -45,6 +47,7 @@ export function ProjectPanel({ projectId, onClose }: { projectId: string; onClos
   return (
     <div className="grid gap-6 p-5 pb-10">
       <PanelHeader data={data} actions={actions} />
+      <ProjectLabels projectId={projectId} labelIds={data.labelIds ?? []} />
       {allDone && pr.status !== "completed" && (
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border bg-card px-3 py-2.5">
           <p className="text-sm">{p.allDone}</p>
@@ -54,6 +57,7 @@ export function ProjectPanel({ projectId, onClose }: { projectId: string; onClos
         </div>
       )}
       <Checklist projectId={projectId} tasks={data.tasks} />
+      <ContactCard project={pr} onSave={actions.save} />
       <ProjectNotes key={projectId} projectId={projectId} notes={pr.notes} notesVersion={pr.notesVersion} />
       <ProjectDocuments projectId={projectId} />
       <History projectId={projectId} />

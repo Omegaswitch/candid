@@ -7,7 +7,7 @@ import type { Ctx } from "./context";
 
 /** Per-member UI state: remembered view, filters, sort and sidebar. Unknown keys are dropped. */
 export const prefsSchema = z.object({
-  view: z.enum(["grid", "table"]).default("grid"),
+  view: z.enum(["grid", "table", "board"]).default("grid"),
   sort: z.enum(["manual", "due", "name", "activity"]).default("manual"),
   filters: z
     .object({
@@ -15,8 +15,9 @@ export const prefsSchema = z.object({
       status: z.enum(["active", "waiting", "completed"]).nullable().default(null),
       priority: z.enum(["normal", "high"]).nullable().default(null),
       due: z.enum(["overdue", "week", "month", "none"]).nullable().default(null),
+      labelId: z.string().nullable().default(null),
     })
-    .default({ ownerId: null, status: null, priority: null, due: null }),
+    .default({ ownerId: null, status: null, priority: null, due: null, labelId: null }),
   sidebarCollapsed: z.boolean().default(false),
   completedCollapsed: z.boolean().default(true),
 });

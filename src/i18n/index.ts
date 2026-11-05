@@ -1,3 +1,4 @@
+import { analytics } from "./en/analytics";
 import { trash } from "./en/trash";
 import { help } from "./en/help";
 import { workUnitAsyncStorage } from "next/dist/server/app-render/work-unit-async-storage.external";
@@ -21,7 +22,7 @@ import { views } from "./en/views";
  * extra key fails typecheck). `t` resolves to the viewer's locale, chosen per person with the
  * `candid_locale` cookie (see `setLocale`). Czech is the default; English is opt-in.
  */
-export const en = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help, trash };
+export const en = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help, trash, analytics };
 export type Strings = typeof en;
 
 export type Locale = "en" | "cs";

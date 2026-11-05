@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNotNull, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { documents, favorites, projects, type Document } from "@/db/schema";
@@ -8,6 +8,7 @@ import { logActivity } from "./activity";
 import type { Ctx } from "./context";
 import { AppError, conflict, notFound } from "./errors";
 import { loadProject } from "./projects";
+import { extractPdfText, isPdf } from "./pdf-text";
 import { newIncomingKey, newStorageKey, storage, type PresignedUpload } from "./storage";
 
 /** What the browser sees. Never includes `storageKey`. */
@@ -97,7 +98,11 @@ export function magicMatches(type: FileType, head: Uint8Array) {
 
 // ---------------------------------------------------------------- reads
 
-function toDto(d: Document, extra: { pinned: boolean; projectName: string | null }): DocumentDto {
+/** Every column except the (large) extracted text, which only search reads. */
+const { contentText: _contentText, ...docColumns } = getTableColumns(documents);
+type DocumentRow = Omit<Document, "contentText">;
+
+function toDto(d: DocumentRow, extra: { pinned: boolean; projectName: string | null }): DocumentDto {
   return {
     id: d.id,
     kind: d.kind,
@@ -125,7 +130,7 @@ export async function listDocuments(ctx: Ctx, opts: { projectId?: string; ids?: 
   if (opts.ids) where.push(inArray(documents.id, opts.ids));
   const rows = await db
     .select({
-      d: documents,
+      d: docColumns,
       projectName: projects.name,
       pinned: sql<boolean>`exists (select 1 from ${favorites} f where f.membership_id = ${ctx.membershipId}
         and f.kind = 'document' and f.entity_id = ${documents.id})`,
@@ -146,7 +151,7 @@ async function getDto(ctx: Ctx, id: string) {
 /** Any row of this workspace, including pending and removed ones. */
 async function loadDocument(ctx: Ctx, id: string) {
   const [d] = await db
-    .select()
+    .select(docColumns)
     .from(documents)
     .where(and(eq(documents.id, id), eq(documents.workspaceId, ctx.workspaceId)));
   if (!d) throw notFound("Document");
@@ -244,8 +249,10 @@ export async function finalizeUpload(ctx: Ctx, uploadId: string, opts: { replace
     throw await fail(reject("invalid", "verification", `The file’s contents are not a valid ${type.toUpperCase()} file, so it was not kept.`));
   }
 
+  const text = await textFields(key, pending.mimeType, head.size);
+
   if (!opts.replaceId) {
-    await db.update(documents).set({ uploadedAt: new Date(), sizeBytes: head.size, updatedAt: new Date() }).where(eq(documents.id, pending.id));
+    await db.update(documents).set({ uploadedAt: new Date(), sizeBytes: head.size, updatedAt: new Date(), ...text }).where(eq(documents.id, pending.id));
     await logActivity(ctx, {
       projectId: pending.projectId,
       entityType: "document",
@@ -264,7 +271,7 @@ export async function finalizeUpload(ctx: Ctx, uploadId: string, opts: { replace
     await tx.delete(documents).where(eq(documents.id, pending.id));
     await tx
       .update(documents)
-      .set({ storageKey: key, mimeType: pending.mimeType, sizeBytes: head.size, version: sql`${documents.version} + 1`, updatedAt: new Date() })
+      .set({ storageKey: key, mimeType: pending.mimeType, sizeBytes: head.size, ...text, version: sql`${documents.version} + 1`, updatedAt: new Date() })
       .where(eq(documents.id, target.id));
   });
   if (target.storageKey) await storage().remove(target.storageKey).catch((e) => console.error("Could not delete replaced object", e));
@@ -276,6 +283,33 @@ export async function finalizeUpload(ctx: Ctx, uploadId: string, opts: { replace
     data: { name: target.name, sizeBytes: head.size },
   });
   return getDto(ctx, target.id);
+}
+
+/**
+ * Search text for a verified object. Never throws: an upload must not fail because its text could
+ * not be read. A storage read failure leaves `textExtractedAt` null so the backfill retries it; a
+ * PDF that cannot be parsed (encrypted, corrupt, timeout) is marked done with no text.
+ */
+export async function textFields(
+  key: string,
+  mimeType: string | null,
+  size: number,
+): Promise<{ contentText: string | null; textExtractedAt: Date | null }> {
+  if (!isPdf(mimeType)) return { contentText: null, textExtractedAt: null };
+  let bytes: Uint8Array;
+  try {
+    bytes = await storage().readStart(key, size);
+  } catch (e) {
+    console.error("Could not read PDF for text extraction", e);
+    return { contentText: null, textExtractedAt: null };
+  }
+  try {
+    const text = await extractPdfText(bytes);
+    return { contentText: text || null, textExtractedAt: new Date() };
+  } catch (e) {
+    console.warn("PDF text extraction failed", e instanceof Error ? e.message : e);
+    return { contentText: null, textExtractedAt: new Date() };
+  }
 }
 
 // ---------------------------------------------------------------- links and edits

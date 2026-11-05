@@ -19,6 +19,8 @@ export const help = {
   shortcuts: [
     { keys: "Ctrl / ⌘ + K", what: "Search and jump anywhere" },
     { keys: "/", what: "Open search (outside text fields)" },
+    { keys: "N", what: "New project (outside text fields)" },
+    { keys: "T", what: "Add a step to the open project (outside text fields)" },
     { keys: "Enter", what: "Save a title edit or add a step" },
     { keys: "Esc", what: "Cancel editing or close the panel" },
   ],

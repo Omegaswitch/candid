@@ -14,7 +14,7 @@ import { fmt, t } from "@/i18n";
 import { daysBetween } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { ProjectSummary } from "@/server/projects";
-import { DueLabel, HighPriority, Initials, StatusPill } from "./project-bits";
+import { DueLabel, HighPriority, Initials, LabelChips, StatusPill } from "./project-bits";
 import { ProgressRing } from "./progress-ring";
 
 export type CardActions = {
@@ -160,6 +160,7 @@ export const ProjectCard = memo(function ProjectCard({
             {p.name}
           </a>
           <div className="truncate text-[13px] text-muted-foreground">{p.client ?? t.common.none}</div>
+          <LabelChips labels={p.labels} className="mt-2 justify-center" />
         </div>
       </div>
 

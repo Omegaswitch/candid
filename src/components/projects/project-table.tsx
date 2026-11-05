@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { fmt, t } from "@/i18n";
 import type { ProjectSummary } from "@/server/projects";
 import { type CardActions, openOnClick, ProjectMenu } from "./project-card";
-import { ChecklistTrack, DueLabel, HighPriority, StatusPill } from "./project-bits";
+import { ChecklistTrack, DueLabel, HighPriority, LabelChips, StatusPill } from "./project-bits";
 
 /** Compact table view. Below sm the rows fold into two-line list rows; nothing is dropped. */
 export function ProjectTable({
@@ -66,6 +66,7 @@ export function ProjectTable({
                     {p.name}
                   </a>
                   {p.priority === "high" && <HighPriority />}
+                  <LabelChips labels={p.labels} className="hidden flex-nowrap overflow-hidden sm:flex" />
                 </div>
                 <div className="truncate text-xs text-muted-foreground">{p.client ?? t.common.none}</div>
               </td>

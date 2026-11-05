@@ -97,6 +97,31 @@ export function useReorderProjects() {
   });
 }
 
+/**
+ * Pipeline board: move a project to another status column. Optimistic on the active list; the
+ * PATCH carries the summary's `version`, so a concurrent edit returns 409 and the list refetches.
+ */
+export function useSetProjectStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ p, status }: { p: ProjectSummary; status: ProjectSummary["status"] }) =>
+      api(`/api/projects/${p.id}`, { method: "PATCH", json: { status, priority: p.priority, version: p.version } }),
+    onMutate: async ({ p, status }) => {
+      await qc.cancelQueries({ queryKey: qk.projects() });
+      const prev = setActive(qc, (list) => list.map((x) => (x.id === p.id ? { ...x, status } : x)));
+      return { prev };
+    },
+    onError: (e, { p }, c) => {
+      if (c?.prev) qc.setQueryData(qk.projects(), c.prev);
+      toast.error(fmt(e instanceof ApiError && e.isConflict ? t.projects.board.conflict : t.projects.board.failed, { name: p.name }));
+    },
+    onSettled: (_d, _e, { p }) => {
+      afterProjectChange(qc);
+      qc.invalidateQueries({ queryKey: qk.project(p.id) });
+    },
+  });
+}
+
 export function useSetPinned() {
   const qc = useQueryClient();
   return useMutation({

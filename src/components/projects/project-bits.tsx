@@ -5,6 +5,8 @@ import { fmt, t } from "@/i18n";
 import { dueState, formatDay, todayLocal } from "@/lib/dates";
 import { initials } from "@/lib/people";
 import { cn } from "@/lib/utils";
+import { labelClass } from "@/hooks/labels";
+import type { Label } from "@/server/labels";
 import type { ProjectSummary } from "@/server/projects";
 
 /** Status always carries its word; the tint only repeats it. */
@@ -105,5 +107,19 @@ export function ChecklistTrack({ done, total, className }: { done: number; total
         <span key={i} className={cn("min-w-0 flex-1 rounded-[2px]", i < done ? "bg-hue" : "bg-raised")} />
       ))}
     </div>
+  );
+}
+
+/** Small coloured chips for a project's labels; nothing when there are none. */
+export function LabelChips({ labels, className }: { labels: Label[]; className?: string }) {
+  if (!labels.length) return null;
+  return (
+    <ul aria-label={t.projects.labels.title} className={cn("flex min-w-0 flex-wrap gap-1", className)}>
+      {labels.map((l) => (
+        <li key={l.id} className={cn("inline-flex h-5 max-w-40 items-center truncate rounded-full px-2 text-xs font-medium", labelClass[l.color])}>
+          <span className="truncate">{l.name}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

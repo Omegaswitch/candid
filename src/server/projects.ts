@@ -2,12 +2,13 @@ import "server-only";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Tx } from "@/db";
-import { favorites, projects, projectTemplates, tasks, templateTasks } from "@/db/schema";
+import { favorites, labels, projectLabels, projects, projectTemplates, tasks, templateTasks } from "@/db/schema";
 import { logActivity } from "./activity";
 import { defaultTemplateId } from "./templates";
 import type { Ctx } from "./context";
 import { AppError, conflict, notFound } from "./errors";
 import { assertMembers } from "./members";
+import type { Label } from "./labels";
 
 export const isoDate = z.iso.date();
 // Omitted stays undefined (leave as is); empty string or null clears it.
@@ -32,6 +33,15 @@ export const projectPatch = z.object({
   status: z.enum(["active", "waiting", "completed"]).optional(),
   priority: z.enum(["normal", "high"]).optional(),
   dueDate: isoDate.nullish(),
+  contactName: nullableText,
+  contactEmail: z
+    .string()
+    .trim()
+    .max(200)
+    .nullish()
+    .transform((v) => (v === undefined ? undefined : v || null))
+    .pipe(z.email().nullish()),
+  contactPhone: z.string().trim().max(50).regex(/^[+\d\s()./-]*$/).nullish().transform((v) => (v === undefined ? undefined : v || null)),
   version: z.int(),
 });
 
@@ -55,6 +65,7 @@ export type ProjectSummary = {
   waitingCount: number;
   nextTask: { id: string; title: string; dueDate: string | null; assigneeId: string | null } | null;
   pinned: boolean;
+  labels: Label[];
 };
 
 const todayUtc = () => new Date().toISOString().slice(0, 10);
@@ -86,6 +97,9 @@ export async function listProjectSummaries(
         order by nt.position limit 1)`,
       pinned: sql<boolean>`exists (select 1 from ${favorites} f where f.membership_id = ${ctx.membershipId}
         and f.kind = 'project' and f.entity_id = ${projects.id})`,
+      labels: sql<Label[]>`coalesce((
+        select json_agg(json_build_object('id', l.id, 'name', l.name, 'color', l.color) order by l.name)
+        from project_labels pl join labels l on l.id = pl.label_id where pl.project_id = ${projects.id}), '[]'::json)`,
     })
     .from(projects)
     .leftJoin(tasks, eq(tasks.projectId, projects.id))
@@ -133,7 +147,12 @@ export async function getProject(ctx: Ctx, id: string) {
     .select({ id: favorites.id })
     .from(favorites)
     .where(and(eq(favorites.membershipId, ctx.membershipId), eq(favorites.kind, "project"), eq(favorites.entityId, id)));
-  return { project: p, tasks: list, pinned: !!fav };
+  const labelRows = await db
+    .select({ id: projectLabels.labelId })
+    .from(projectLabels)
+    .innerJoin(labels, eq(labels.id, projectLabels.labelId))
+    .where(and(eq(projectLabels.projectId, id), eq(labels.workspaceId, ctx.workspaceId)));
+  return { project: p, tasks: list, pinned: !!fav, labelIds: labelRows.map((r) => r.id) };
 }
 
 export async function createProject(

@@ -111,6 +111,8 @@ export const help: Localized<typeof en> = {
   shortcuts: [
     { keys: "Ctrl / ⌘ + K", what: "Hledat a přejít kamkoli" },
     { keys: "/", what: "Otevřít hledání (mimo textové pole)" },
+    { keys: "N", what: "Nový projekt (mimo textové pole)" },
+    { keys: "T", what: "Přidat krok do otevřeného projektu (mimo textové pole)" },
     { keys: "Enter", what: "Uložit úpravu názvu nebo přidat krok" },
     { keys: "Esc", what: "Zrušit úpravu nebo zavřít panel" },
   ],
