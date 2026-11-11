@@ -5,9 +5,14 @@ import { NextResponse } from "next/server";
 // sign-in with a return URL (auth.protect); API routes answer 401 JSON themselves. Authorisation
 // (workspace membership, roles) is enforced in every route handler and page via requireCtx().
 // Link-preview files (OG image, icons, manifest) must be public so Discord, Slack and Teams can show them.
+// OAuth for MCP connectors: metadata, client registration and the token endpoint are called by
+// Claude / ChatGPT servers without a session; /oauth/authorize (the consent screen) needs one.
 const isPublic = createRouteMatcher([
   "/sign-in(.*)",
   "/api/(.*)",
+  "/.well-known/(.*)",
+  "/oauth/register",
+  "/oauth/token",
   "/opengraph-image(.*)",
   "/twitter-image(.*)",
   "/icon(.*)",

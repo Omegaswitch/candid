@@ -11,8 +11,11 @@ const allowed = (req: NextRequest) => {
 /** Development stand-in only. 404 unless AUTH_MODE=dev (which itself refuses to run on Vercel). */
 export async function POST(req: NextRequest) {
   if (!allowed(req)) return new NextResponse(null, { status: 404 });
-  const email = String((await req.formData()).get("email") ?? "").toLowerCase();
-  const res = NextResponse.redirect(new URL("/", req.url), 303);
+  const form = await req.formData();
+  const email = String(form.get("email") ?? "").toLowerCase();
+  // Back to where sign-in was asked for (e.g. the OAuth consent screen), but only on this origin.
+  const next = new URL(String(form.get("redirect_url") || "/"), req.url);
+  const res = NextResponse.redirect(next.origin === req.nextUrl.origin ? next : new URL("/", req.url), 303);
   res.cookies.set(DEV_USER_COOKIE, email, { httpOnly: true, sameSite: "lax", path: "/" });
   return res;
 }

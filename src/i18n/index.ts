@@ -10,6 +10,7 @@ import { google } from "./en/google";
 import { importExport } from "./en/importExport";
 import { legal } from "./en/legal";
 import { nav } from "./en/nav";
+import { oauth } from "./en/oauth";
 import { projects } from "./en/projects";
 import { search } from "./en/search";
 import { settings } from "./en/settings";
@@ -22,7 +23,7 @@ import { views } from "./en/views";
  * extra key fails typecheck). `t` resolves to the viewer's locale, chosen per person with the
  * `candid_locale` cookie (see `setLocale`). Czech is the default; English is opt-in.
  */
-export const en = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help, trash, analytics };
+export const en = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help, trash, analytics, oauth };
 export type Strings = typeof en;
 
 export type Locale = "en" | "cs";

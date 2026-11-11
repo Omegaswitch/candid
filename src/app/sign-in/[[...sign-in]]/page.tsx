@@ -8,8 +8,9 @@ import { ClerkSignIn } from "./clerk-sign-in";
 
 export const generateMetadata = (): Metadata => ({ title: t.common.signIn });
 
-export default async function SignInPage() {
+export default async function SignInPage({ searchParams }: PageProps<"/sign-in/[[...sign-in]]">) {
   if (authMode === "clerk") return <ClerkSignIn />;
+  const next = (await searchParams).redirect_url;
 
   // Development stand-in: pick a seeded person. Never available on a deployment (see lib/auth/session).
   const people = await db
@@ -37,6 +38,7 @@ export default async function SignInPage() {
             <li key={p.email}>
               <form action="/api/dev/sign-in" method="post">
                 <input type="hidden" name="email" value={p.email} />
+                {typeof next === "string" && <input type="hidden" name="redirect_url" value={next} />}
                 <button className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-accent focus-visible:bg-accent">
                   <span>
                     <span className="block font-medium">

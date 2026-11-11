@@ -1,7 +1,6 @@
-import type { oauth as en } from "../en/oauth";
 import type { Localized } from "./types";
 
-export const oauth: Localized<typeof en> = {
+export const oauth: Localized<typeof import("../en/oauth").oauth> = {
   title: "Připojit aplikaci",
   heading: "{client} chce přístup ke Candidu",
   body: "Bude jednat vaším jménem: uvidí totéž co vy v pracovním prostoru {workspace} a jeho změny se zapíšou pod vaším jménem.",

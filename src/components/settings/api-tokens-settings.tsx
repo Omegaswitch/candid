@@ -24,6 +24,7 @@ import { api } from "@/lib/api";
 import { formatInstant, formatRelative } from "@/lib/dates";
 import { qk } from "@/lib/query-keys";
 import type { ApiTokenDto } from "@/server/api-tokens";
+import type { OAuthGrantDto } from "@/server/oauth";
 import { SettingsSection } from "./settings-section";
 
 const s = t.settings.apiTokens;
@@ -52,7 +53,35 @@ function CopyField({ value, label }: { value: string; label: string }) {
   );
 }
 
-/** Personal access tokens for the MCP endpoint. Every member manages only their own. */
+/** A destructive ghost button behind a confirmation dialog (revoke a token, disconnect an app). */
+function ConfirmRevoke({ label, ariaLabel, title, body, onConfirm }: { label: string; ariaLabel: string; title: string; body: string; onConfirm: () => void }) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-negative hover:text-negative" aria-label={ariaLabel}>
+          {label}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{body}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+            {label}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/**
+ * The MCP endpoint: apps connected through OAuth (Claude, ChatGPT) and personal access tokens for
+ * clients that cannot sign in. Every member sees and manages only their own.
+ */
 export function ApiTokensSettings() {
   const qc = useQueryClient();
   const nameId = useId();
@@ -61,7 +90,7 @@ export function ApiTokensSettings() {
 
   const list = useQuery({
     queryKey: qk.apiTokens(),
-    queryFn: () => api<{ tokens: ApiTokenDto[]; endpoint: string | null }>("/api/tokens"),
+    queryFn: () => api<{ tokens: ApiTokenDto[]; grants: OAuthGrantDto[]; endpoint: string | null }>("/api/tokens"),
   });
   const create = useMutation({
     mutationFn: (n: string) => api<{ token: ApiTokenDto & { token: string } }>("/api/tokens", { method: "POST", json: { name: n } }),
@@ -76,6 +105,15 @@ export function ApiTokensSettings() {
     mutationFn: (tok: ApiTokenDto) => api(`/api/tokens/${tok.id}`, { method: "DELETE" }),
     onSuccess: (_, tok) => {
       toast.success(fmt(s.revoked, { name: tok.name }));
+      qc.invalidateQueries({ queryKey: qk.apiTokens() });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const disconnect = useMutation({
+    mutationFn: (g: OAuthGrantDto) => api(`/api/oauth-grants/${g.id}`, { method: "DELETE" }),
+    onSuccess: (_, g) => {
+      toast.success(fmt(s.disconnected, { name: g.clientName }));
       qc.invalidateQueries({ queryKey: qk.apiTokens() });
     },
     onError: (e) => toast.error(e.message),
@@ -100,6 +138,45 @@ export function ApiTokensSettings() {
         <div className="flex flex-col gap-1.5">
           <span className="text-muted-foreground">{s.endpoint}</span>
           {endpoint ? <CopyField value={endpoint} label={s.endpoint} /> : <Skeleton className="h-8 w-full" />}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h3 className="font-medium">{s.appsTitle}</h3>
+          {list.isPending ? (
+            <Skeleton className="h-10 w-full" />
+          ) : list.isError ? (
+            <p className="text-negative">{s.appsLoadError}</p>
+          ) : list.data.grants.length === 0 ? (
+            <p className="text-muted-foreground">{s.appsEmpty}</p>
+          ) : (
+            <ul className="divide-y">
+              {list.data.grants.map((g) => (
+                <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <div className="min-w-0">
+                    <p className="font-medium break-words">{g.clientName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {g.redirectHost && <code className="font-mono">{g.redirectHost}</code>}
+                      {g.redirectHost && " · "}
+                      {fmt(s.connectedAt, { date: formatInstant(g.createdAt) })} ·{" "}
+                      {g.lastUsedAt ? fmt(s.lastUsed, { when: formatRelative(g.lastUsedAt) }) : s.neverUsed}
+                    </p>
+                  </div>
+                  <ConfirmRevoke
+                    label={s.disconnect}
+                    ariaLabel={fmt(s.disconnectFor, { name: g.clientName })}
+                    title={fmt(s.disconnectTitle, { name: g.clientName })}
+                    body={s.disconnectBody}
+                    onConfirm={() => disconnect.mutate(g)}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1 border-t pt-4">
+          <h3 className="font-medium">{s.listTitle}</h3>
+          <p className="text-muted-foreground">{s.tokensHelp}</p>
         </div>
 
         {fresh && (
@@ -131,8 +208,7 @@ export function ApiTokensSettings() {
           </Button>
         </form>
 
-        <div className="flex flex-col gap-2 border-t pt-4">
-          <h3 className="font-medium">{s.listTitle}</h3>
+        <div className="flex flex-col gap-2">
           {list.isPending ? (
             <Skeleton className="h-10 w-full" />
           ) : list.isError ? (
@@ -150,25 +226,13 @@ export function ApiTokensSettings() {
                       {tok.lastUsedAt ? fmt(s.lastUsed, { when: formatRelative(tok.lastUsedAt) }) : s.neverUsed}
                     </p>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-negative hover:text-negative" aria-label={fmt(s.revokeFor, { name: tok.name })}>
-                        {s.revoke}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{fmt(s.revokeTitle, { name: tok.name })}</AlertDialogTitle>
-                        <AlertDialogDescription>{s.revokeBody}</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                        <AlertDialogAction variant="destructive" onClick={() => revoke.mutate(tok)}>
-                          {s.revoke}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <ConfirmRevoke
+                    label={s.revoke}
+                    ariaLabel={fmt(s.revokeFor, { name: tok.name })}
+                    title={fmt(s.revokeTitle, { name: tok.name })}
+                    body={s.revokeBody}
+                    onConfirm={() => revoke.mutate(tok)}
+                  />
                 </li>
               ))}
             </ul>

@@ -154,7 +154,6 @@ export async function registerClient(raw: unknown) {
     throw new OAuthError("invalid_client_metadata", "Only the authorization_code grant (with refresh_token) is supported");
   if (m.response_types && !m.response_types.includes("code")) throw new OAuthError("invalid_client_metadata", "Only response_type code is supported");
   // Control characters out; the consent page shows the name next to the redirect host.
-  // eslint-disable-next-line no-control-regex
   const name = (m.client_name ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 100) || "MCP client";
   const [row] = await db.insert(oauthClients).values({ name, redirectUris: m.redirect_uris }).returning();
   return {
