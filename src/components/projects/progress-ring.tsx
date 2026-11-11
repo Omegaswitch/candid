@@ -27,6 +27,9 @@ function stageColour(x: number) {
  * colour whenever a step is ticked. Around it, one tick per step in that step's own colour from
  * the scale, lit when done. Reduced motion removes the animation (globals.css).
  */
+/** Trig results differ in the last digits between Node and browsers; rounded, server HTML and hydration agree. */
+const px = (v: number) => Math.round(v * 100) / 100;
+
 export function ProgressRing({
   done,
   total,
@@ -63,10 +66,10 @@ export function ProgressRing({
             return (
               <line
                 key={i}
-                x1={size / 2 + r1 * Math.cos(a)}
-                y1={size / 2 + r1 * Math.sin(a)}
-                x2={size / 2 + r2 * Math.cos(a)}
-                y2={size / 2 + r2 * Math.sin(a)}
+                x1={px(size / 2 + r1 * Math.cos(a))}
+                y1={px(size / 2 + r1 * Math.sin(a))}
+                x2={px(size / 2 + r2 * Math.cos(a))}
+                y2={px(size / 2 + r2 * Math.sin(a))}
                 strokeWidth={2.5}
                 strokeLinecap="round"
                 className="stroke-border"

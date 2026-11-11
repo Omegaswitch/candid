@@ -55,9 +55,14 @@ function setSummary(qc: QueryClient, id: string, fn: (s: ProjectSummary) => Proj
   qc.setQueriesData<ProjectSummary[]>({ queryKey: ["projects"] }, (list) => (Array.isArray(list) ? list.map((s) => (s.id === id ? fn(s) : s)) : list));
 }
 
-/** After a write: refresh what it affects. The detail refetches only once no other write of this panel is pending. */
+/**
+ * After a write: refresh what it affects, once no other write of this panel is pending. Writes are
+ * queued per panel, so ticking five steps in a row refetches the detail, list and counts once
+ * instead of five times; the optimistic copy covers the gap.
+ */
 function refresh(qc: QueryClient, projectId: string) {
-  if (qc.isMutating({ mutationKey: mutationKeyOf(projectId) }) <= 1) qc.invalidateQueries({ queryKey: qk.project(projectId) });
+  if (qc.isMutating({ mutationKey: mutationKeyOf(projectId) }) > 1) return;
+  qc.invalidateQueries({ queryKey: qk.project(projectId) });
   qc.invalidateQueries({ queryKey: ["projects"] });
   qc.invalidateQueries({ queryKey: qk.counts() });
   qc.invalidateQueries({ queryKey: ["tasks"] });

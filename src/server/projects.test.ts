@@ -95,3 +95,33 @@ describe("duplicateProject", () => {
     expect(got.project).toMatchObject({ contactName: "Jana", contactEmail: "jana@example.com", contactPhone: "+420 123" });
   });
 });
+
+describe("batched writes and reads", () => {
+  it("reorders projects and tasks in one statement, scoped to the workspace", async () => {
+    const { reorderProjects } = await import("./projects");
+    const { reorderTasks } = await import("./tasks");
+    const ctx = await makeCtx();
+    const other = await makeCtx();
+    const [a, b, c] = [await createProject(ctx, { name: "A" }), await createProject(ctx, { name: "B" }), await createProject(ctx, { name: "C" })];
+    await reorderProjects(ctx, [c.id, a.id, b.id]);
+    expect((await listProjectSummaries(ctx)).map((s) => [s.name, s.position])).toEqual([["C", 0], ["A", 1], ["B", 2]]);
+    await expect(reorderProjects(other, [a.id])).rejects.toMatchObject({ code: "not_found" });
+
+    const p = await createProject(ctx, { name: "Steps", tasks: [{ title: "one" }, { title: "two" }, { title: "three" }] });
+    const ids = (await getProject(ctx, p.id)).tasks.map((t) => t.id);
+    await reorderTasks(ctx, p.id, [ids[2], ids[0], ids[1]]);
+    expect((await getProject(ctx, p.id)).tasks.map((t) => [t.title, t.position])).toEqual([["three", 0], ["one", 1], ["two", 2]]);
+  });
+
+  it("project detail carries the caller's pin and the project's labels", async () => {
+    const { setPinned } = await import("./favorites");
+    const { createLabel, setProjectLabels } = await import("./labels");
+    const ctx = await makeCtx();
+    const p = await createProject(ctx, { name: "Detail" });
+    expect(await getProject(ctx, p.id)).toMatchObject({ pinned: false, labelIds: [] });
+    const l = await createLabel(ctx, { name: "Pinned" });
+    await setProjectLabels(ctx, p.id, [l.id]);
+    await setPinned(ctx, "project", p.id, true);
+    expect(await getProject(ctx, p.id)).toMatchObject({ pinned: true, labelIds: [l.id] });
+  });
+});

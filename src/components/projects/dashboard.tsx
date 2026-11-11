@@ -407,6 +407,8 @@ function SortableGrid({
   };
   return (
     <DndContext
+      // A fixed id keeps dnd-kit's aria ids identical in the server render and the browser.
+      id="project-grid"
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}

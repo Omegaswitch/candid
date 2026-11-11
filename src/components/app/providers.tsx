@@ -2,10 +2,11 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
+import { rememberTimeZone } from "@/lib/dates";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -23,6 +24,8 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   );
+  // Lets server renders compute the viewer's "today" and seed date-dependent data (see the app layout).
+  useEffect(rememberTimeZone, []);
   return (
     // next-themes injects a blocking script so the right theme applies before first paint.
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

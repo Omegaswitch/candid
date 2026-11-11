@@ -27,6 +27,8 @@ export function useMembers() {
     queryKey: qk.members(),
     queryFn: () => api<{ members: MemberSummary[] }>("/api/members").then((r) => r.members),
     staleTime: 5 * 60_000,
+    // People change rarely: poll at the pace of staleTime, not the shared 30 s.
+    refetchInterval: 5 * 60_000,
   });
 }
 

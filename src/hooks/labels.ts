@@ -24,6 +24,7 @@ export function useLabels() {
     queryKey: qk.labels(),
     queryFn: () => api<{ labels: Label[] }>("/api/labels").then((r) => r.labels),
     staleTime: 60_000,
+    refetchInterval: 60_000, // labels change rarely; the shared 30 s poll is for tasks and projects
   });
 }
 

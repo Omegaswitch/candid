@@ -135,6 +135,8 @@ export function ProjectBoard({ projects, today, actions }: { projects: ProjectSu
   };
   return (
     <DndContext
+      // A fixed id keeps dnd-kit's aria ids identical in the server render and the browser.
+      id="project-board"
       sensors={sensors}
       collisionDetection={collision}
       onDragEnd={onDragEnd}
