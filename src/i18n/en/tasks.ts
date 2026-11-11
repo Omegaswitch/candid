@@ -1,5 +1,6 @@
 // Filled by the feature that owns this namespace. Keep keys in sentence case; {name} placeholders go through fmt().
 export const tasks = {
+  you: "you",
   panel: {
     close: "Close project",
     loadError: "Could not load this project.",

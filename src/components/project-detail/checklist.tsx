@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { useEscapeCancel } from "./inline-text";
 import { TaskRow } from "./task-row";
 import { useMemberName } from "./fields";
+import { useSession } from "@/components/app/session";
 import { Initials } from "@/components/projects/project-bits";
 import { ProgressRing } from "@/components/projects/progress-ring";
 
@@ -242,8 +243,10 @@ function PersonSection({
   name,
   done,
   total,
+  isMe,
   children,
 }: {
+  isMe?: boolean;
   sectionKey: string;
   name: string | null;
   done: number;
@@ -259,7 +262,7 @@ function PersonSection({
       ref={setNodeRef}
       role="group"
       aria-label={label}
-      className={cn("grid gap-1 rounded-lg", isOver && "bg-accent/40")}
+      className={cn("grid gap-1 rounded-lg", isMe && "bg-accent/30 p-1.5", isOver && "bg-accent/40")}
     >
       <div className="flex items-center gap-2 px-1 pt-2">
         {name ? (
@@ -298,6 +301,7 @@ export function Checklist({
   const byPerson = prefs.data?.checklistByPerson ?? false;
   const members = useMembers();
   const memberName = useMemberName();
+  const session = useSession();
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const sensors = useSensors(
@@ -330,6 +334,9 @@ export function Checklist({
       .filter((id) => present.has(id));
     for (const k of present)
       if (k !== UNASSIGNED && !order.includes(k)) order.push(k);
+    // My own steps first, so everyone sees their part straight away.
+    const me = order.indexOf(session.membershipId);
+    if (me > 0) order.unshift(...order.splice(me, 1));
     return [...order, UNASSIGNED];
   })();
   /** Drop in grouped mode: into another section reassigns (and places it at the target step); same section reorders. */
@@ -403,7 +410,8 @@ export function Checklist({
           <PersonSection
             key={key}
             sectionKey={key}
-            name={key === UNASSIGNED ? null : (memberName(key) ?? key)}
+            name={key === UNASSIGNED ? null : `${memberName(key) ?? key}${key === session.membershipId ? ` (${t.tasks.you})` : ""}`}
+            isMe={key === session.membershipId}
             done={mine.filter((x) => x.done).length}
             total={mine.length}
           >

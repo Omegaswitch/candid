@@ -1,6 +1,7 @@
 import type { Localized } from "./types";
 
 export const tasks: Localized<typeof import("../en/tasks").tasks> = {
+  you: "vy",
   panel: {
     close: "Zavřít projekt",
     loadError: "Projekt se nepodařilo načíst.",
