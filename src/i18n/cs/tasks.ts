@@ -10,6 +10,7 @@ export const tasks: Localized<typeof import("../en/tasks").tasks> = {
     nameLabel: "Název projektu",
     client: "Klient",
     clientPlaceholder: "Přidat klienta",
+    openClient: "Otevřít stránku klienta",
     contact: "Kontakt na klienta",
     contactName: "Jméno",
     contactEmail: "E-mail",
@@ -138,6 +139,9 @@ export const tasks: Localized<typeof import("../en/tasks").tasks> = {
       notes_edited: "{actor} upravil(a) poznámky",
       archived: "{actor} archivoval(a) projekt",
       restored: "{actor} obnovil(a) projekt",
+      follow_up_set: "{actor} nastavil(a) další kontakt na {date}",
+      follow_up_cleared: "{actor} zrušil(a) další kontakt",
+      follow_up_done: "{actor} označil(a) kontakt za hotový",
     },
     task: {
       created: "{actor} přidal(a) „{title}“",

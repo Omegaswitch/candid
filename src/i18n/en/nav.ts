@@ -2,6 +2,7 @@ export const nav = {
   allProjects: "All projects",
   myTasks: "My tasks",
   dueSoon: "Due soon",
+  calendar: "Calendar",
   overdue: "Overdue",
   analytics: "Analytics",
   waiting: "Waiting",

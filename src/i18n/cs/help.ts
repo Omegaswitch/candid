@@ -27,6 +27,9 @@ export const help: Localized<typeof en> = {
         "Filtry (vlastník, stav, termín, priorita) a řazení si Candid pamatuje. Tlačítky vpravo přepnete mezi kartami, tabulkou a pipeline podle stavu.",
         "Tlačítko „Moje“ jedním klikem ukáže jen projekty, které vlastníte nebo kde máte otevřené kroky.",
         "Pipeline funguje i na telefonu: sloupce posouváte do strany. Na dotykové obrazovce kartu přesunete přes nabídku ⋯ → „Přesunout do“.",
+        "Pod údaji na kartě je vidět, jak dlouho je projekt v aktuálním stavu (např. „12 d ve stavu Čeká se“). V tabulce kliknutím na „Ve stavu“ seřadíte projekty podle této doby.",
+        "Aktivní nebo čekající projekt, na kterém se 14 dní nic nestalo (žádná změna stavu, kroku ani poznámky), dostane značku „Bez pohybu“. Tlačítko „Vyžaduje pozornost“ ukáže jen projekty bez pohybu nebo s úkoly po termínu.",
+        "Název klienta na kartě, v tabulce, v panelu i v Přehledech otevře stránku klienta: všechny jeho projekty (aktivní i archivované), kontakty s odkazy pro volání a psaní, podíl kroků hotových včas a kroky po termínu.",
       ],
     },
     {
@@ -62,6 +65,31 @@ export const help: Localized<typeof en> = {
         "Poznámky k projektu i ke krokům se ukládají samy chvíli po dopsání. Stav vidíte u pole: „Ukládání…“, „Uloženo“, „Nelze uložit“.",
         "Když se uložení nepovede, text zůstane na místě a tlačítkem „Zkusit znovu“ ho odešlete.",
         "Když stejnou poznámku mezitím upravil kolega, Candid ukáže obě verze vedle sebe a vy vyberete, kterou ponechat, nebo ponecháte obě.",
+      ],
+    },
+    {
+      id: "kalendar",
+      title: "Kalendář",
+      steps: [
+        "„Kalendář“ v levém menu ukazuje měsíc (týden začíná pondělím) s otevřenými kroky podle termínu, termíny projektů (vlaječka) a dalšími kontakty (čárkovaně, ikona telefonu). Dnešek je zvýrazněný; mezi měsíci se přepíná šipkami a tlačítkem „Dnes“.",
+        "„Jen moje“ nechá kroky přiřazené vám a projekty, které vlastníte. Kliknutím na položku otevřete projekt. Den s více než třemi položkami ukazuje „+N“; kliknutím zobrazíte všechny.",
+        "Krok přetažením na jiný den změníte jeho termín; dole se objeví Zpět. Z klávesnice: na kroku stiskněte mezerník, šipkami se přesuňte a mezerníkem upusťte. Na telefonu je kalendář seznam dnů, ve kterých něco je.",
+      ],
+    },
+    {
+      id: "kontakt",
+      title: "Další kontakt a zápis kontaktu",
+      steps: [
+        "V projektu je pole „Další kontakt“: datum a krátká poznámka k příštímu hovoru nebo e-mailu s klientem; křížkem ho zrušíte. Zobrazí se i v kalendáři.",
+        "„Kontaktovat dnes“ nahoře na stránce Všechny projekty ukazuje kontakty, které jsou na řadě nebo mají zpoždění. „Hotovo“ kontakt smaže a zapíše ho do historie.",
+        "„Zapsat kontakt“ uloží do historie projektu hovor, e-mail nebo schůzku s jednořádkovým výsledkem a může rovnou nastavit datum dalšího kontaktu. Totéž umí AI asistenti nástrojem log_contact.",
+      ],
+    },
+    {
+      id: "prehledy",
+      title: "Přehledy",
+      steps: [
+        "Stránka Přehledy v levém menu ukazuje čísla za celý prostor. „Průměrně dní ve stavu“ říká, jak dlouho projekt obvykle zůstává v jednotlivých stavech (počítá se z historie změn, včetně probíhajících pobytů).",
       ],
     },
     {

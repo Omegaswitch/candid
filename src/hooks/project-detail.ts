@@ -17,7 +17,7 @@ export type ProjectRow = Wire<Project>;
 export type TaskRow = Wire<Task>;
 export type ProjectDetail = { project: ProjectRow; tasks: TaskRow[]; pinned: boolean; labelIds: string[] };
 export type TaskPatch = Partial<Pick<TaskRow, "title" | "done" | "assigneeId" | "dueDate" | "note" | "waiting" | "waitingReason">>;
-export type ProjectPatch = Partial<Pick<ProjectRow, "name" | "client" | "ownerId" | "status" | "priority" | "dueDate" | "contactName" | "contactEmail" | "contactPhone">>;
+export type ProjectPatch = Partial<Pick<ProjectRow, "name" | "client" | "ownerId" | "status" | "priority" | "dueDate" | "contactName" | "contactEmail" | "contactPhone" | "followUpOn" | "followUpNote">>;
 
 /** Shared with the sheet, which starts this fetch while the panel's code is still loading. */
 export const projectQuery = (id: string) => ({ queryKey: qk.project(id), queryFn: () => api<ProjectDetail>(`/api/projects/${id}`) });
@@ -67,6 +67,9 @@ function refresh(qc: QueryClient, projectId: string) {
   qc.invalidateQueries({ queryKey: qk.counts() });
   qc.invalidateQueries({ queryKey: ["tasks"] });
   qc.invalidateQueries({ queryKey: qk.activity(projectId) });
+  // Step dates, due dates and the follow-up also draw on the calendar and the "Contact today" list.
+  qc.invalidateQueries({ queryKey: ["calendar"] });
+  qc.invalidateQueries({ queryKey: qk.followUps() });
 }
 
 /**

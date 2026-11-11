@@ -8,6 +8,7 @@ import { t } from "@/i18n";
 import { ApiError } from "@/lib/api";
 import { Checklist } from "./checklist";
 import { ContactCard } from "./contact";
+import { ContactLog, FollowUpCard } from "./follow-up";
 import { ProjectLabels } from "./labels";
 import { History } from "./history";
 import { ProjectNotes } from "./notes";
@@ -58,6 +59,8 @@ export function ProjectPanel({ projectId, onClose }: { projectId: string; onClos
       )}
       <Checklist projectId={projectId} tasks={data.tasks} />
       <ContactCard project={pr} onSave={actions.save} />
+      <FollowUpCard project={pr} onSave={actions.save} />
+      <ContactLog projectId={projectId} />
       <ProjectNotes key={projectId} projectId={projectId} notes={pr.notes} notesVersion={pr.notesVersion} />
       <ProjectDocuments projectId={projectId} />
       <History projectId={projectId} />

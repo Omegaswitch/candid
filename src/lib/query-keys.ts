@@ -12,6 +12,8 @@ export const qk = {
   googleStatus: () => ["google", "status"] as const,
   search: (q: string) => ["search", q] as const,
   activity: (projectId: string) => ["activity", projectId] as const,
+  calendar: (from: string, to: string) => ["calendar", from, to] as const,
+  followUps: () => ["follow-ups"] as const,
   apiTokens: () => ["api-tokens"] as const,
 };
 

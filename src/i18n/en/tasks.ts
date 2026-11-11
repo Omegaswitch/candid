@@ -9,6 +9,7 @@ export const tasks = {
     nameLabel: "Project name",
     client: "Client",
     clientPlaceholder: "Add client",
+    openClient: "Open client page",
     contact: "Client contact",
     contactName: "Name",
     contactEmail: "Email",
@@ -127,6 +128,9 @@ export const tasks = {
       notes_edited: "{actor} edited the notes",
       archived: "{actor} archived the project",
       restored: "{actor} restored the project",
+      follow_up_set: "{actor} set the next contact for {date}",
+      follow_up_cleared: "{actor} cleared the next contact",
+      follow_up_done: "{actor} marked the follow-up done",
     },
     task: {
       created: "{actor} added “{title}”",

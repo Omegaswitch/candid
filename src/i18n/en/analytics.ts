@@ -25,4 +25,9 @@ export const analytics = {
   busiestHint: "Open tasks assigned",
   noBusy: "No open tasks are assigned.",
   overdueShort: "overdue",
+  daysInStatus: "Average days in each status",
+  daysInStatusHint: "Mean length of a stay, current stays included",
+  daysUnit: "d",
+  staysN: { one: "{n} stay", other: "{n} stays" },
+  noStays: "No data yet",
 };

@@ -8,7 +8,7 @@ import type { Ctx } from "./context";
 /** Per-member UI state: remembered view, filters, sort and sidebar. Unknown keys are dropped. */
 export const prefsSchema = z.object({
   view: z.enum(["grid", "table", "board"]).default("grid"),
-  sort: z.enum(["manual", "due", "name", "activity"]).default("manual"),
+  sort: z.enum(["manual", "due", "name", "activity", "status"]).default("manual"),
   filters: z
     .object({
       ownerId: z.string().nullable().default(null),
@@ -18,8 +18,10 @@ export const prefsSchema = z.object({
       labelId: z.string().nullable().default(null),
       /** "Mine": projects I own or where I have open steps. */
       mine: z.boolean().default(false),
+      /** "Needs attention": idle for IDLE_DAYS or with overdue steps. */
+      attention: z.boolean().default(false),
     })
-    .default({ ownerId: null, status: null, priority: null, due: null, labelId: null, mine: false }),
+    .default({ ownerId: null, status: null, priority: null, due: null, labelId: null, mine: false, attention: false }),
   sidebarCollapsed: z.boolean().default(false),
   completedCollapsed: z.boolean().default(true),
   checklistByPerson: z.boolean().default(false),

@@ -76,6 +76,9 @@ export const projects = pgTable(
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
     contactPhone: text("contact_phone"),
+    // Next planned contact with the client: a date and a one-line reminder of why. Both optional.
+    followUpOn: day("follow_up_on"),
+    followUpNote: text("follow_up_note"),
     // Notes have their own version so a metadata edit never conflicts with someone typing notes.
     notesVersion: integer("notes_version").notNull().default(1),
     position: doublePrecision("position").notNull().default(0),
@@ -94,6 +97,8 @@ export const projects = pgTable(
     index("projects_ws_status_idx").on(t.workspaceId, t.status),
     index("projects_ws_due_idx").on(t.workspaceId, t.dueDate),
     index("projects_ws_owner_idx").on(t.workspaceId, t.ownerId),
+    // Only projects with a follow-up set: the calendar range and the "Contact today" list.
+    index("projects_ws_follow_up_idx").on(t.workspaceId, t.followUpOn).where(sql`${t.followUpOn} is not null`),
   ],
 );
 

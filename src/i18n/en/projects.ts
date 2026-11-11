@@ -36,11 +36,17 @@ export const projects = {
   noOwner: "No owner",
   client: "Client",
   checklist: "{done} of {total} tasks completed",
+  statusFor: "{n} d in {status}",
+  statusDaysShort: "{n} d",
+  idle: "Idle {n} d",
+  idleHint: "No history entry, step change or note for {n} days or more",
 
   filters: {
     label: "Filters",
     mine: "Mine",
     mineHint: "Projects I own or where I have open steps",
+    attention: "Needs attention",
+    attentionHint: "Idle projects and projects with overdue steps",
     owner: "Owner",
     status: "Status",
     due: "Due date",
@@ -62,6 +68,7 @@ export const projects = {
     due: "Due date",
     name: "Name",
     activity: "Recent activity",
+    status: "Longest in status",
   },
   view: { label: "View", grid: "Cards", table: "Table", board: "Pipeline" },
   board: {
@@ -149,6 +156,7 @@ export const projects = {
     next: "Next task",
     due: "Due",
     actions: "Actions",
+    inStatus: "In status",
   },
 
   archive: {

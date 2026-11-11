@@ -23,6 +23,7 @@ import { useLabels } from "@/hooks/labels";
 import { useReorderProjects, useSetArchived, useSetPinned } from "@/hooks/projects";
 import { fmt, plural, t } from "@/i18n";
 import { addDaysIso, todayLocal } from "@/lib/dates";
+import { needsAttention } from "@/lib/insight";
 import { cn } from "@/lib/utils";
 import type { Prefs } from "@/server/preferences";
 import type { ProjectSummary } from "@/server/projects";
@@ -30,6 +31,7 @@ import { DuplicateDialog } from "./duplicate-dialog";
 import { type CardActions, ProjectCard } from "./project-card";
 import { activeFilterCount, type Filters, NO_FILTERS, ProjectToolbar } from "./project-filters";
 import { useSession } from "@/components/app/session";
+import { FollowUpsDue } from "./follow-ups-due";
 import { ProjectSheet } from "./project-sheet";
 import { ProjectTable } from "./project-table";
 import { ProjectBoard } from "./project-board";
@@ -55,6 +57,8 @@ const SORTS: Record<Prefs["sort"], (a: ProjectSummary, b: ProjectSummary) => num
   due: (a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999") || byName(a, b),
   name: byName,
   activity: (a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt),
+  // Longest in its current status first (the oldest `statusSince`).
+  status: (a, b) => a.statusSince.localeCompare(b.statusSince) || byName(a, b),
 };
 
 /** The project id in `/projects/<id>`, the shareable address of an open panel. */
@@ -95,6 +99,7 @@ export function Dashboard() {
     const list = all.filter(
       (p) =>
         (!filters.mine || p.ownerId === me || p.openAssigneeIds?.includes(me)) &&
+        (!filters.attention || needsAttention(p)) &&
         (!filters.ownerId || p.ownerId === filters.ownerId) &&
         (!filters.status || p.status === filters.status) &&
         (!filters.priority || p.priority === filters.priority) &&
@@ -185,6 +190,8 @@ export function Dashboard() {
         </div>
       </header>
 
+      <FollowUpsDue onOpen={open} />
+
       <ProjectToolbar
         filters={filters}
         sort={sort}
@@ -244,7 +251,7 @@ export function Dashboard() {
               </Button>
             </div>
           )}
-          <ProjectTable projects={shown} ownerName={ownerName} today={today} actions={actions} selected={selected} onSelect={onSelect} />
+          <ProjectTable projects={shown} ownerName={ownerName} today={today} actions={actions} selected={selected} onSelect={onSelect} sort={sort} onSort={(s) => savePrefs.mutate({ sort: s })} />
           {exportingSelected && (
             <ExportDialog open onOpenChange={(o) => !o && setExportingSelected(false)} preset={{ scope: "selected", projectIds: [...selected] }} />
           )}
@@ -325,6 +332,7 @@ function CardSkeleton() {
             <Skeleton className="h-4 w-24" />
           </div>
         ))}
+        <div className="col-span-2 flex h-5 items-center"><Skeleton className="h-3 w-32" /></div>
       </div>
     </div>
   );

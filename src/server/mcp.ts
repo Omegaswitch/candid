@@ -7,6 +7,7 @@ import { listDocuments } from "./documents";
 import { AppError } from "./errors";
 import { createLabel, listLabels, setProjectLabels, type Label } from "./labels";
 import { listMembers, type MemberSummary } from "./members";
+import { contactInput, logContact } from "./follow-ups";
 import { createProject, getProject, listProjectSummaries, setArchived, updateProject, updateProjectNotes } from "./projects";
 import { search } from "./search";
 import { createTask, listTaskView, loadTask, updateTask } from "./tasks";
@@ -126,6 +127,7 @@ export function buildMcpServer(ctx: Ctx) {
         owner: memberName(members, p.ownerId),
         archived: !!p.archivedAt,
         contact: { name: p.contactName, email: p.contactEmail, phone: p.contactPhone },
+        followUp: p.followUpOn ? { on: p.followUpOn, note: p.followUpNote } : null,
         labels: labels.filter((l) => labelIds.includes(l.id)).map((l) => l.name),
         notes: p.notes,
         tasks: tasks.map((t) => ({
@@ -209,6 +211,8 @@ export function buildMcpServer(ctx: Ctx) {
         contactName: z.string().max(200).nullable().optional(),
         contactEmail: z.string().max(200).nullable().optional(),
         contactPhone: z.string().max(50).nullable().optional(),
+        followUpOn: day.nullable().optional().describe("Date of the next planned contact with the client; null clears it (and its note)"),
+        followUpNote: z.string().max(300).nullable().optional().describe("Short reminder of what the next contact is about"),
         notes: z.string().max(100_000).optional(),
       },
     },
@@ -220,7 +224,25 @@ export function buildMcpServer(ctx: Ctx) {
         p = await updateProject(ctx, projectId, { ...patch, ownerId, version: cur.version });
       }
       if (notes !== undefined && notes !== cur.notes) await updateProjectNotes(ctx, projectId, notes, cur.notesVersion);
-      return { id: p.id, name: p.name, status: p.status, dueDate: p.dueDate, client: p.client, version: p.version };
+      return { id: p.id, name: p.name, status: p.status, dueDate: p.dueDate, client: p.client, followUpOn: p.followUpOn, version: p.version };
+    }),
+  );
+
+  server.registerTool(
+    "log_contact",
+    {
+      description:
+        "Record a contact with the client (call, email or meeting) and its outcome in the project history. Optionally set the date of the next contact (followUpOn), which shows in the calendar and on the Contact today list.",
+      inputSchema: {
+        projectId: id("Project"),
+        kind: contactInput.shape.kind,
+        outcome: z.string().max(300).optional().describe("What was said or agreed, in a sentence or two"),
+        followUpOn: day.optional().describe("Date of the next contact"),
+      },
+    },
+    tool(async ({ projectId, ...input }) => {
+      const p = await logContact(ctx, projectId, input);
+      return { projectId, logged: input.kind, followUpOn: p.followUpOn, version: p.version };
     }),
   );
 

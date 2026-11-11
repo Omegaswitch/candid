@@ -6,7 +6,9 @@ import CountUp from "@/components/CountUp";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAnalytics } from "@/hooks/analytics";
-import { t } from "@/i18n";
+import Link from "next/link";
+import { intlLocale, plural, t } from "@/i18n";
+import { clientHref } from "@/lib/clients";
 import { formatDay } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { Analytics } from "@/server/analytics";
@@ -65,10 +67,14 @@ function Body({ data }: { data: Analytics | undefined }) {
         {data ? <WeeklyChart weeks={data.weekly} /> : <Skeleton className="h-44 w-full" />}
       </Panel>
 
+      <Panel title={s.daysInStatus} hint={s.daysInStatusHint}>
+        <DaysInStatus data={data} />
+      </Panel>
+
       <div className="grid gap-6 md:grid-cols-2">
         <Panel title={s.topClients} hint={s.topClientsHint}>
           {data ? (
-            <RankList empty={s.noClients} rows={data.topClients.map((c) => ({ key: c.client, label: c.client, value: c.count }))} />
+            <RankList empty={s.noClients} rows={data.topClients.map((c) => ({ key: c.client, label: c.client, value: c.count, href: clientHref(c.client) }))} />
           ) : (
             <ListSkeleton />
           )}
@@ -93,7 +99,7 @@ function Body({ data }: { data: Analytics | undefined }) {
   );
 }
 
-function Kpi({ label, hint, negative, children }: { label: string; hint?: string | false; negative?: boolean; children: ReactNode }) {
+export function Kpi({ label, hint, negative, children }: { label: string; hint?: string | false; negative?: boolean; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-2 px-4 py-5">
       <span className="text-[13px] text-muted-foreground">{label}</span>
@@ -105,7 +111,7 @@ function Kpi({ label, hint, negative, children }: { label: string; hint?: string
   );
 }
 
-function Panel({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+export function Panel({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 border-b pb-2">
@@ -210,7 +216,26 @@ function WeeklyChart({ weeks }: { weeks: Analytics["weekly"] }) {
   );
 }
 
-function RankList({ rows, empty }: { rows: { key: string; label: string; value: number; note?: string }[]; empty: string }) {
+/** One ruled row, a figure per status: the same ledger strip as the headline numbers. */
+function DaysInStatus({ data }: { data: Analytics | undefined }) {
+  const s = t.analytics;
+  const num = new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 1 });
+  const rows = (["active", "waiting", "completed"] as const).map((status) => data?.avgDaysInStatus.find((r) => r.status === status));
+  return (
+    <section className="grid grid-cols-3 border-y [&>*:not(:last-child)]:border-r">
+      {(["active", "waiting", "completed"] as const).map((status, i) => {
+        const r = rows[i];
+        return (
+          <Kpi key={status} label={s[status]} hint={data && (r?.stays ? plural(r.stays, s.staysN) : s.noStays)}>
+            {data ? r?.days == null ? "—" : <span>{num.format(r.days)}<span className="ml-1 text-base font-medium text-muted-foreground">{s.daysUnit}</span></span> : null}
+          </Kpi>
+        );
+      })}
+    </section>
+  );
+}
+
+function RankList({ rows, empty }: { rows: { key: string; label: string; value: number; note?: string; href?: string }[]; empty: string }) {
   if (!rows.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
   const max = Math.max(...rows.map((r) => r.value));
   return (
@@ -219,7 +244,13 @@ function RankList({ rows, empty }: { rows: { key: string; label: string; value: 
         <li key={r.key} className="grid grid-cols-[1.5rem_1fr_auto] items-center gap-x-3 border-b py-2.5 last:border-b-0">
           <span className="num text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
           <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="truncate text-sm">{r.label}</span>
+            {r.href ? (
+              <Link href={r.href} className="truncate text-sm hover:underline focus-visible:underline focus-visible:outline-none">
+                {r.label}
+              </Link>
+            ) : (
+              <span className="truncate text-sm">{r.label}</span>
+            )}
             <div className="h-1 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full origin-left rounded-full bg-foreground/70 animate-[grow-x_700ms_cubic-bezier(.2,.7,.2,1)_both] motion-reduce:animate-none"

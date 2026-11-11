@@ -11,8 +11,8 @@ import { t } from "@/i18n";
 import { hasUnsaved } from "@/lib/unsaved";
 
 // The panel (checklist, drag and drop, notes, documents, animations) is a separate chunk: it is
-// fetched when the browser is idle after the list renders, so opening a project is still instant
-// but the list does not wait for it.
+// fetched right after hydration, so the list does not wait for it and opening a project is still
+// instant.
 const loadPanel = () => import("@/components/project-detail/project-panel");
 const ProjectPanel = dynamic(() => loadPanel().then((m) => m.ProjectPanel), {
   loading: () => (
@@ -22,8 +22,6 @@ const ProjectPanel = dynamic(() => loadPanel().then((m) => m.ProjectPanel), {
     </div>
   ),
 });
-const whenIdle = (fn: () => void) =>
-  typeof window.requestIdleCallback === "function" ? window.requestIdleCallback(fn, { timeout: 2000 }) : window.setTimeout(fn, 200);
 
 /** The project side panel, on the right so the list behind it stays in view. Escape closes it. */
 export function ProjectSheet({ projectId, onClose }: { projectId: string | null; onClose: () => void }) {
@@ -38,7 +36,7 @@ export function ProjectSheet({ projectId, onClose }: { projectId: string | null;
     if (projectId) void qc.prefetchQuery(projectQuery(projectId));
   }, [projectId, qc]);
   useEffect(() => {
-    whenIdle(() => void loadPanel());
+    void loadPanel();
   }, []);
   const close = () => {
     if (hasUnsaved() && !window.confirm(t.common.unsavedLeave)) return;

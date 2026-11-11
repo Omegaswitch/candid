@@ -50,6 +50,13 @@
       "when": 1794413819391,
       "tag": "0006_open_tasks_index",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794414519274,
+      "tag": "0007_follow_up",
+      "breakpoints": true
     }
   ]
 }

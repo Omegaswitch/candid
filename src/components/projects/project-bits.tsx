@@ -1,8 +1,11 @@
 "use client";
 
-import { ArrowUp, CircleAlert, CircleCheck, Hourglass } from "lucide-react";
+import { ArrowUp, CircleAlert, CircleCheck, Clock, Hourglass } from "lucide-react";
+import Link from "next/link";
 import { fmt, t } from "@/i18n";
 import { dueState, formatDay, todayLocal } from "@/lib/dates";
+import { clientHref } from "@/lib/clients";
+import { daysSince, IDLE_DAYS, idleDays } from "@/lib/insight";
 import { initials } from "@/lib/people";
 import { cn } from "@/lib/utils";
 import { labelClass } from "@/hooks/labels";
@@ -121,5 +124,40 @@ export function LabelChips({ labels, className }: { labels: Label[]; className?:
         </li>
       ))}
     </ul>
+  );
+}
+
+/** "12 d in Waiting": how long the project has been in its current status. Quiet text, never a badge. */
+export function StatusAge({ p, short, className }: { p: Pick<ProjectSummary, "status" | "statusSince">; short?: boolean; className?: string }) {
+  const n = daysSince(p.statusSince);
+  return (
+    <span className={cn("num whitespace-nowrap text-muted-foreground", className)}>
+      {short ? fmt(t.projects.statusDaysShort, { n }) : fmt(t.projects.statusFor, { n, status: t.projects.status[p.status] })}
+    </span>
+  );
+}
+
+/** "Idle 16 d": an active or waiting project nobody has touched for IDLE_DAYS or more. Word plus icon, warning tint. */
+export function IdleBadge({ p, className }: { p: Pick<ProjectSummary, "status" | "lastActivityAt">; className?: string }) {
+  const days = idleDays(p);
+  if (days === null) return null;
+  return (
+    <span
+      title={fmt(t.projects.idleHint, { n: IDLE_DAYS })}
+      className={cn("inline-flex h-5 flex-none items-center gap-1 whitespace-nowrap rounded-full border border-warning/30 px-1.5 text-xs font-medium text-warning", className)}
+    >
+      <Clock className="size-3" aria-hidden />
+      {fmt(t.projects.idle, { n: days })}
+    </span>
+  );
+}
+
+/** The client's name as a link to its page; "—" when there is none. Sits above a card's stretched link. */
+export function ClientLink({ name, className }: { name: string | null; className?: string }) {
+  if (!name?.trim()) return <span className={className}>{t.common.none}</span>;
+  return (
+    <Link href={clientHref(name)} className={cn("relative z-10 rounded-sm hover:text-foreground hover:underline focus-visible:underline focus-visible:outline-none", className)}>
+      {name}
+    </Link>
   );
 }

@@ -27,4 +27,9 @@ export const analytics: Localized<typeof import("../en/analytics").analytics> = 
   busiestHint: "Přiřazené otevřené úkoly",
   noBusy: "Nikdo nemá přiřazený otevřený úkol.",
   overdueShort: "po termínu",
+  daysInStatus: "Průměrně dní ve stavu",
+  daysInStatusHint: "Průměrná délka pobytu ve stavu, včetně probíhajících",
+  daysUnit: "d",
+  staysN: { one: "{n} pobyt", few: "{n} pobyty", many: "{n} pobytu", other: "{n} pobytů" },
+  noStays: "Zatím bez dat",
 };

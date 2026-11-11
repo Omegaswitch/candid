@@ -3,6 +3,7 @@
 import {
   Archive,
   CalendarClock,
+  CalendarDays,
   ChartNoAxesColumn,
   CircleAlert,
   CircleHelp,
@@ -42,6 +43,7 @@ const NAV: NavItem[] = [
   { href: "/", get label() { return t.nav.allProjects; }, icon: FolderKanban },
   { href: "/my-tasks", get label() { return t.nav.myTasks; }, icon: ListChecks, count: "mine" },
   { href: "/due-soon", get label() { return t.nav.dueSoon; }, icon: CalendarClock, count: "dueThisWeek" },
+  { href: "/calendar", get label() { return t.nav.calendar; }, icon: CalendarDays },
   { href: "/overdue", get label() { return t.nav.overdue; }, icon: CircleAlert, count: "overdue" },
   { href: "/waiting", get label() { return t.nav.waiting; }, icon: Hourglass, count: "waiting" },
   { href: "/analytics", get label() { return t.nav.analytics; }, icon: ChartNoAxesColumn },

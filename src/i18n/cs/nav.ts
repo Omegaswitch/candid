@@ -4,6 +4,7 @@ export const nav: Localized<typeof import("../en/nav").nav> = {
   allProjects: "Všechny projekty",
   myTasks: "Moje úkoly",
   dueSoon: "Brzy splatné",
+  calendar: "Kalendář",
   overdue: "Po termínu",
   analytics: "Přehledy",
   waiting: "Čeká se",

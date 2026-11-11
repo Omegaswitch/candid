@@ -15,7 +15,43 @@ export type Analytics = {
   weekly: { week: string; count: number }[];
   topClients: { client: string; count: number }[];
   busiest: { id: string; name: string; open: number; overdue: number }[];
+  /** Mean length of a stay in each status, in days (null when no project was ever in it). */
+  avgDaysInStatus: { status: "active" | "waiting" | "completed"; days: number | null; stays: number }[];
 };
+
+const STATUSES = ["active", "waiting", "completed"] as const;
+
+/**
+ * Average days per stay in each status, rebuilt from the `status_changed` history: a project's stays
+ * run from its creation to the first change, between consecutive changes, and from the last change
+ * until now (the current stay counts too). A project with no change is one stay in its current status.
+ * One statement for the whole workspace. Trashed projects are left out; archived ones count.
+ */
+export async function avgDaysInStatus(ctx: Ctx): Promise<Analytics["avgDaysInStatus"]> {
+  const ws = ctx.workspaceId;
+  const { rows } = await db.execute<{ status: string; days: number | null; stays: number }>(sql`
+    with changes as (
+      select e.project_id, e.created_at, e.data ->> 'from' as from_status, e.data ->> 'to' as to_status,
+             lead(e.created_at) over w as next_at, row_number() over w as n
+      from activity_events e join projects p on p.id = e.project_id
+      where e.workspace_id = ${ws} and p.workspace_id = ${ws} and p.deleted_at is null
+        and e.action = 'status_changed' and e.data ->> 'to' is not null
+      window w as (partition by e.project_id order by e.created_at, e.id)
+    ), stays as (
+      select to_status as status, created_at as since, coalesce(next_at, now()) as until from changes
+      union all
+      select c.from_status, p.created_at, c.created_at from changes c join projects p on p.id = c.project_id
+      where c.n = 1 and c.from_status is not null
+      union all
+      select p.status::text, p.created_at, now() from projects p
+      where p.workspace_id = ${ws} and p.deleted_at is null
+        and not exists (select 1 from changes c where c.project_id = p.id)
+    )
+    select status, round(avg(greatest(extract(epoch from (until - since)), 0) / 86400)::numeric, 1)::float8 as days, count(*)::int as stays
+    from stays group by status`);
+  const by = new Map(rows.map((r) => [r.status, r]));
+  return STATUSES.map((status) => ({ status, days: by.get(status)?.days ?? null, stays: by.get(status)?.stays ?? 0 }));
+}
 
 /** Monday of the ISO week containing `isoDay`. */
 export function weekStart(isoDay: string) {
@@ -40,7 +76,7 @@ export async function workspaceAnalytics(ctx: Ctx, today: string): Promise<Analy
   const liveTask = and(eq(tasks.workspaceId, ws), isNull(tasks.deletedAt), isNull(projects.deletedAt));
   const since = addDays(weekStart(today), -(ANALYTICS_WEEKS - 1) * 7);
 
-  const [statusRow, completionRow, taskRow, weeklyRows, clientRows, busyRows] = await Promise.all([
+  const [statusRow, completionRow, taskRow, weeklyRows, clientRows, busyRows, daysInStatus] = await Promise.all([
     db
       .select({
         active: sql<number>`count(*) filter (where ${projects.status} = 'active')::int`,
@@ -96,6 +132,7 @@ export async function workspaceAnalytics(ctx: Ctx, today: string): Promise<Analy
       .groupBy(memberships.id)
       .orderBy(desc(sql`3`), sql`2`)
       .limit(5),
+    avgDaysInStatus(ctx),
   ]);
 
   const ratios = completionRow.map((r) => Number(r.ratio)).filter((n) => Number.isFinite(n));
@@ -108,5 +145,6 @@ export async function workspaceAnalytics(ctx: Ctx, today: string): Promise<Analy
     weekly: fillWeeks(weeklyRows, today),
     topClients: clientRows,
     busiest: busyRows,
+    avgDaysInStatus: daysInStatus,
   };
 }

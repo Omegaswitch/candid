@@ -22,7 +22,7 @@ import { fmt, t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { ProjectSummary } from "@/server/projects";
 import { type CardActions, openOnClick, ProjectMenu } from "./project-card";
-import { ChecklistTrack, DueLabel, HighPriority, LabelChips, StatusPill } from "./project-bits";
+import { ChecklistTrack, ClientLink, DueLabel, HighPriority, IdleBadge, LabelChips, StatusAge, StatusPill } from "./project-bits";
 
 const STATUSES = ["active", "waiting", "completed"] as const;
 type Status = (typeof STATUSES)[number];
@@ -64,11 +64,15 @@ function BoardCard({ p, today, actions, moveTo }: { p: ProjectSummary; today: st
           <ProjectMenu p={p} actions={actions} index={0} count={1} onStatus={(s) => moveTo(p, s, true)} />
         </span>
       </div>
-      {p.client && <div className="-mt-1.5 truncate text-xs text-muted-foreground">{p.client}</div>}
+      {p.client && <div className="-mt-1.5 truncate text-xs text-muted-foreground" onPointerDown={(e) => e.stopPropagation()}><ClientLink name={p.client} /></div>}
       <LabelChips labels={p.labels} />
       <ChecklistTrack done={p.doneCount} total={p.taskCount} />
       <div className="text-xs">
         <DueLabel date={p.dueDate} done={p.status === "completed"} today={today} />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
+        <StatusAge p={p} />
+        <IdleBadge p={p} />
       </div>
     </li>
   );

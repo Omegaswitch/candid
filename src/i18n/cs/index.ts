@@ -1,6 +1,8 @@
 import { analytics } from "./analytics";
+import { calendar } from "./calendar";
 import { trash } from "./trash";
 import { help } from "./help";
+import { clients } from "./clients";
 import { common } from "./common";
 import { documents } from "./documents";
 import { google } from "./google";
@@ -14,4 +16,4 @@ import { settings } from "./settings";
 import { tasks } from "./tasks";
 import { views } from "./views";
 
-export const cs = { common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help, trash, analytics, oauth };
+export const cs = { clients, common, nav, projects, tasks, documents, importExport, google, settings, views, search, legal, help, trash, analytics, oauth, calendar };

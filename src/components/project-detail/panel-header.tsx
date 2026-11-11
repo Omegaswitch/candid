@@ -1,6 +1,7 @@
 "use client";
 
-import { Archive, ArchiveRestore, Copy, Link2, MoreHorizontal, Pin, PinOff } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowUpRight, Copy, Link2, MoreHorizontal, Pin, PinOff } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { errorText, type ProjectDetail, type ProjectPatch, type useProjectActions } from "@/hooks/project-detail";
 import { fmt, t } from "@/i18n";
+import { clientHref } from "@/lib/clients";
 import { dueState, formatInstant } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { DateInput, ghostControl, MemberSelect } from "./fields";
@@ -151,6 +153,16 @@ export function PanelHeader({ data, actions }: { data: ProjectDetail; actions: A
             >
               {pr.client || <span className="text-muted-foreground">{p.clientPlaceholder}</span>}
             </InlineText>
+            {pr.client?.trim() && (
+              <Link
+                href={clientHref(pr.client)}
+                aria-label={p.openClient}
+                title={p.openClient}
+                className="flex-none rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <ArrowUpRight className="size-3.5" aria-hidden />
+              </Link>
+            )}
             {pr.archivedAt && <span className="flex-none rounded-full bg-pill-neutral px-2 py-0.5 text-xs font-medium text-pill-neutral-ink">{p.archived}</span>}
           </div>
         </div>

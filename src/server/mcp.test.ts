@@ -97,6 +97,25 @@ describe("mcp endpoint", () => {
     expect(events.map((e) => e.action)).toEqual(expect.arrayContaining(["created", "status_changed", "notes_edited", "completed"]));
   });
 
+  it("log_contact records a contact and follow-up; update_project and get_project carry the follow-up", async () => {
+    const ctx = await makeCtx();
+    const { token } = await createApiToken(ctx, { name: "T" });
+    const p = (await callTool(token, "create_project", { name: "Kontakt" })).data;
+    const logged = await callTool(token, "log_contact", { projectId: p.id, kind: "email", outcome: "Poslána nabídka", followUpOn: "2026-12-02" });
+    expect(logged.data).toMatchObject({ logged: "email", followUpOn: "2026-12-02" });
+    expect((await callTool(token, "get_project", { projectId: p.id })).data.followUp).toEqual({ on: "2026-12-02", note: null });
+    await callTool(token, "update_project", { projectId: p.id, followUpOn: "2026-12-05", followUpNote: "Ozvat se" });
+    expect((await callTool(token, "get_project", { projectId: p.id })).data.followUp).toEqual({ on: "2026-12-05", note: "Ozvat se" });
+    await callTool(token, "update_project", { projectId: p.id, followUpOn: null });
+    expect((await callTool(token, "get_project", { projectId: p.id })).data.followUp).toBeNull();
+    const events = await db.select().from(activityEvents).where(eq(activityEvents.projectId, p.id));
+    expect(events.find((e) => e.action === "contact_logged")?.data).toEqual({ kind: "email", outcome: "Poslána nabídka" });
+
+    expect((await callTool(token, "log_contact", { projectId: p.id, kind: "fax" })).isError).toBe(true);
+    const foreign = await createProject(await makeCtx(), { name: "Theirs" });
+    expect((await callTool(token, "log_contact", { projectId: foreign.id, kind: "call" })).isError).toBe(true);
+  });
+
   it("never reaches another workspace's data", async () => {
     const mine = await makeCtx();
     const theirs = await makeCtx();

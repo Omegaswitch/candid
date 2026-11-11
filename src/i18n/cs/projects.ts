@@ -36,11 +36,17 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
   noOwner: "Bez vlastníka",
   client: "Klient",
   checklist: "Úkoly: hotovo {done} z\u00a0{total}",
+  statusFor: "{n} d ve stavu {status}",
+  statusDaysShort: "{n} d",
+  idle: "Bez pohybu {n} d",
+  idleHint: "Žádný záznam v historii, změna kroku ani poznámka {n} dní a déle",
 
   filters: {
     label: "Filtry",
     mine: "Moje",
     mineHint: "Projekty, které vlastním nebo kde mám otevřené kroky",
+    attention: "Vyžaduje pozornost",
+    attentionHint: "Projekty bez pohybu a projekty s úkoly po termínu",
     owner: "Vlastník",
     status: "Stav",
     due: "Termín",
@@ -62,6 +68,7 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
     due: "Termín",
     name: "Název",
     activity: "Poslední aktivita",
+    status: "Nejdéle ve stavu",
   },
   view: { label: "Zobrazení", grid: "Karty", table: "Tabulka", board: "Pipeline" },
   board: {
@@ -149,6 +156,7 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
     next: "Další úkol",
     due: "Termín",
     actions: "Akce",
+    inStatus: "Ve stavu",
   },
 
   archive: {

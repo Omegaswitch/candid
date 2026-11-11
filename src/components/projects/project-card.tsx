@@ -17,7 +17,7 @@ import { fmt, t } from "@/i18n";
 import { daysBetween } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { ProjectSummary } from "@/server/projects";
-import { DueLabel, HighPriority, Initials, LabelChips, StatusPill } from "./project-bits";
+import { ClientLink, DueLabel, HighPriority, IdleBadge, Initials, LabelChips, StatusAge, StatusPill } from "./project-bits";
 import { ProgressRing } from "./progress-ring";
 
 export type CardActions = {
@@ -179,7 +179,7 @@ export const ProjectCard = memo(function ProjectCard({
           >
             {p.name}
           </a>
-          <div className="truncate text-[13px] text-muted-foreground">{p.client ?? t.common.none}</div>
+          <div className="truncate text-[13px] text-muted-foreground"><ClientLink name={p.client} /></div>
           <LabelChips labels={p.labels} className="mt-2 justify-center" />
         </div>
       </div>
@@ -206,6 +206,10 @@ export const ProjectCard = memo(function ProjectCard({
             </span>
             <Initials name={ownerName} />
           </dd>
+        </div>
+        <div className="col-span-2 flex min-h-5 items-center justify-between gap-2 text-xs">
+          <StatusAge p={p} className="truncate" />
+          <IdleBadge p={p} />
         </div>
       </dl>
     </div>

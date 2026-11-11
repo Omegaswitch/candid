@@ -1,6 +1,6 @@
 "use client";
 
-import { Columns3, LayoutGrid, ListFilter, Rows3, UserRound } from "lucide-react";
+import { Columns3, LayoutGrid, ListFilter, Rows3, TriangleAlert, UserRound } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -57,25 +57,49 @@ function FilterSelect<V extends string>({
 }
 
 export const activeFilterCount = (fl: Filters) => Object.values(fl).filter((v) => v !== null && v !== false).length;
-export const NO_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null, labelId: null, mine: false };
+export const NO_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null, labelId: null, mine: false, attention: false };
 
-/** "Mine" in one click: projects I own or where I have open steps. Kept with the other filters in prefs. */
-function MineToggle({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
+/** Quick filters in one click, kept with the other filters in prefs: "Mine" and "Needs attention". */
+function QuickToggle({
+  filters,
+  onChange,
+  flag,
+  label,
+  hint,
+  icon: Icon,
+  compact,
+}: {
+  filters: Filters;
+  onChange: (f: Filters) => void;
+  flag: "mine" | "attention";
+  label: string;
+  hint: string;
+  icon: typeof UserRound;
+  /** Phone: the label collapses to the icon on the narrowest screens. */
+  compact?: boolean;
+}) {
   return (
     <Button
       variant="outline"
-      aria-pressed={filters.mine}
-      title={f.mineHint}
-      onClick={() => onChange({ ...filters, mine: !filters.mine })}
+      aria-pressed={filters[flag]}
+      title={hint}
+      onClick={() => onChange({ ...filters, [flag]: !filters[flag] })}
       className={cn(
         "h-9 bg-card md:h-8",
-        filters.mine && "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:hover:bg-foreground/90",
+        filters[flag] && "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:hover:bg-foreground/90",
       )}
     >
-      <UserRound /> {f.mine}
+      <Icon /> <span className={cn(compact && "sr-only min-[480px]:not-sr-only")}>{label}</span>
     </Button>
   );
 }
+
+const MineToggle = (props: { filters: Filters; onChange: (f: Filters) => void }) => (
+  <QuickToggle {...props} flag="mine" label={f.mine} hint={f.mineHint} icon={UserRound} />
+);
+const AttentionToggle = (props: { filters: Filters; onChange: (f: Filters) => void; compact?: boolean }) => (
+  <QuickToggle {...props} flag="attention" label={f.attention} hint={f.attentionHint} icon={TriangleAlert} />
+);
 
 function FilterFields({ filters, onChange, wide }: { filters: Filters; onChange: (f: Filters) => void; wide?: boolean }) {
   const members = useMembers();
@@ -143,7 +167,7 @@ export function ProjectToolbar({
   const [sheet, setSheet] = useState(false);
   const n = activeFilterCount(filters);
   // The sheet's badge counts what is inside the sheet; "Mine" sits beside it.
-  const inSheet = activeFilterCount({ ...filters, mine: false });
+  const inSheet = activeFilterCount({ ...filters, mine: false, attention: false });
   const clear = () => onFilters(NO_FILTERS);
 
   return (
@@ -151,6 +175,7 @@ export function ProjectToolbar({
       {/* Desktop and tablet: the filters read left to right. */}
       <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-2 md:flex">
         <MineToggle filters={filters} onChange={onFilters} />
+        <AttentionToggle filters={filters} onChange={onFilters} />
         <FilterFields filters={filters} onChange={onFilters} />
         {n > 0 && (
           <Button variant="ghost" size="sm" onClick={clear}>
@@ -165,6 +190,7 @@ export function ProjectToolbar({
           {inSheet > 0 && <span className="num rounded-full bg-foreground px-1.5 text-xs text-background">{inSheet}</span>}
         </Button>
         <MineToggle filters={filters} onChange={onFilters} />
+        <AttentionToggle filters={filters} onChange={onFilters} compact />
         <Sheet open={sheet} onOpenChange={setSheet}>
           <SheetContent side="bottom" className="gap-3 rounded-t-xl pb-6">
             <SheetHeader className="pb-0">
@@ -173,7 +199,7 @@ export function ProjectToolbar({
             <div className="flex flex-col gap-2 px-4">
               <FilterFields filters={filters} onChange={onFilters} wide />
               <div className="mt-2 flex gap-2">
-                <Button variant="outline" className="h-10 flex-1" onClick={() => onFilters({ ...NO_FILTERS, mine: filters.mine })} disabled={!inSheet}>
+                <Button variant="outline" className="h-10 flex-1" onClick={() => onFilters({ ...NO_FILTERS, mine: filters.mine, attention: filters.attention })} disabled={!inSheet}>
                   {f.clear}
                 </Button>
                 <Button className="h-10 flex-1" onClick={() => setSheet(false)}>
@@ -197,7 +223,7 @@ export function ProjectToolbar({
             </SelectValue>
           </SelectTrigger>
           <SelectContent align="end">
-            {(["manual", "due", "name", "activity"] as const).map((s) => (
+            {(["manual", "due", "name", "activity", "status"] as const).map((s) => (
               <SelectItem key={s} value={s}>
                 {t.projects.sort[s]}
               </SelectItem>
