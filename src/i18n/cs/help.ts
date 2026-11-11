@@ -99,6 +99,20 @@ export const help: Localized<typeof en> = {
       ],
     },
     {
+      id: "ai",
+      title: "Propojení s Claude a ChatGPT (MCP)",
+      steps: [
+        "Candid umí připojit AI asistenta. Ten pak za vás hledá, čte projekty a úkoly, zakládá projekty, přidává a odškrtává kroky a přidává štítky. Vidí jen váš workspace a každá změna se zapíše do historie pod vaším jménem.",
+        "Adresa serveru je https://www.candid.quest/api/mcp (najdete ji i v Nastavení → Integrace).",
+        "Claude: Nastavení → Konektory → Přidat vlastní konektor. Vložte adresu, potvrďte, přihlaste se do Candidu a klikněte na „Povolit“.",
+        "ChatGPT: Nastavení → Aplikace a konektory → Pokročilé → zapněte Režim pro vývojáře. Pak „Vytvořit“, vložte adresu, jako ověření zvolte OAuth, přihlaste se do Candidu a klikněte na „Povolit“.",
+        "Pak stačí psát, třeba „Co je po termínu?“ nebo „Přidej do projektu Novák krok Poslat smlouvu a přiřaď ho Ivaně“.",
+        "Připojené aplikace uvidíte v Nastavení → Integrace a tlačítkem „Odpojit“ jim přístup kdykoli zrušíte.",
+        "Pro jiné nástroje (např. Claude Code) si tamtéž vytvoříte osobní klíč a pošlete ho v hlavičce Authorization: Bearer. Klíč se ukáže jen jednou, nikomu ho neposílejte.",
+        "Pozor: co asistent z Candidu přečte (jména klientů, poznámky), odchází do dané AI služby.",
+      ],
+    },
+    {
       id: "nastaveni",
       title: "Nastavení (správci)",
       steps: [
