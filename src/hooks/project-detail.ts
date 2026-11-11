@@ -19,8 +19,11 @@ export type ProjectDetail = { project: ProjectRow; tasks: TaskRow[]; pinned: boo
 export type TaskPatch = Partial<Pick<TaskRow, "title" | "done" | "assigneeId" | "dueDate" | "note" | "waiting" | "waitingReason">>;
 export type ProjectPatch = Partial<Pick<ProjectRow, "name" | "client" | "ownerId" | "status" | "priority" | "dueDate" | "contactName" | "contactEmail" | "contactPhone">>;
 
+/** Shared with the sheet, which starts this fetch while the panel's code is still loading. */
+export const projectQuery = (id: string) => ({ queryKey: qk.project(id), queryFn: () => api<ProjectDetail>(`/api/projects/${id}`) });
+
 export function useProject(id: string) {
-  return useQuery({ queryKey: qk.project(id), queryFn: () => api<ProjectDetail>(`/api/projects/${id}`) });
+  return useQuery(projectQuery(id));
 }
 
 export function useProjectActivity(id: string, enabled: boolean) {

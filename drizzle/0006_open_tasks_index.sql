@@ -1,0 +1,1 @@
+CREATE INDEX "tasks_ws_open_due_idx" ON "tasks" USING btree ("workspace_id","due_date") WHERE not "tasks"."done" and "tasks"."deleted_at" is null;

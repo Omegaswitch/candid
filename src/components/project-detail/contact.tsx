@@ -2,13 +2,14 @@
 
 import { Mail, Phone, User } from "lucide-react";
 import { useState } from "react";
-import { z } from "zod";
+// The bare regex z.email() uses, without pulling the zod runtime (~30 kB gzip) into the client bundle.
+import { regexes } from "zod/v4/core";
 import type { ProjectPatch, ProjectRow } from "@/hooks/project-detail";
 import { fmt, t } from "@/i18n";
 import { InlineText } from "./inline-text";
 
 const p = t.tasks.panel;
-const email = z.email();
+const email = regexes.email;
 const phone = /^[+\d\s()./-]*$/;
 
 type Field = "contactName" | "contactEmail" | "contactPhone";
@@ -18,7 +19,7 @@ export function ContactCard({ project, onSave }: { project: ProjectRow; onSave: 
   const [error, setError] = useState<string | null>(null);
   const save = (field: Field, v: string) => {
     const value = v.trim() || null;
-    if (value && field === "contactEmail" && !email.safeParse(value).success) return setError(p.invalidEmail);
+    if (value && field === "contactEmail" && !email.test(value)) return setError(p.invalidEmail);
     if (value && field === "contactPhone" && !phone.test(value)) return setError(p.invalidPhone);
     setError(null);
     onSave({ [field]: value });

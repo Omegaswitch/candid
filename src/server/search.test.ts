@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { makeCtx } from "../../test/factory";
 import { db } from "@/db";
-import { documents, labels, projectLabels, projects } from "@/db/schema";
+import { documents, labels, memberships, projectLabels, projects } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { highlight, parseQuery } from "@/lib/search-query";
+import { dateRange, hasCriteria, highlight, isMe, parseQuery } from "@/lib/search-query";
+import { pushFront } from "@/lib/search-history";
 import type { Ctx } from "./context";
 import { createProject, setArchived } from "./projects";
-import { search } from "./search";
+import { recentProjects, search } from "./search";
 import { createTask, setTaskRemoved, updateTask } from "./tasks";
 
 async function label(ctx: Ctx, projectId: string, name: string) {
@@ -72,14 +73,14 @@ describe("search", () => {
 
 describe("search query syntax", () => {
   it("parses Czech and English filters, accent-free keys and quoted values", () => {
-    expect(parseQuery('klient:"Stavby Novák" štítek:Urgentní typ:úkol po termínu střecha')).toEqual({
+    expect(parseQuery('klient:"Stavby Novák" štítek:Urgentní typ:úkol po termínu střecha')).toMatchObject({
       terms: ["střecha"],
       client: "Stavby Novák",
       label: "Urgentní",
       types: ["task"],
       overdue: true,
     });
-    expect(parseQuery("client:acme label:vip type:project type:document overdue roof")).toEqual({
+    expect(parseQuery("client:acme label:vip type:project type:document overdue roof")).toMatchObject({
       terms: ["roof"],
       client: "acme",
       label: "vip",
@@ -222,3 +223,281 @@ describe("exact phrase search", () => {
   });
 });
 
+
+async function member(ctx: Ctx, displayName: string, emailLocal: string) {
+  const [m] = await db
+    .insert(memberships)
+    .values({ workspaceId: ctx.workspaceId, email: `${emailLocal}@test.local`, userId: `test:${emailLocal}${crypto.randomUUID()}`, displayName, status: "active" })
+    .returning();
+  return m;
+}
+
+describe("person and date filter parsing", () => {
+  it("parses assignee and owner filters with Czech, accent-free and English keys", () => {
+    expect(parseQuery("přiřazeno:Jana vede:Novák")).toMatchObject({ assignee: "Jana", owner: "Novák" });
+    expect(parseQuery("prirazeno:ja vlastník:me")).toMatchObject({ assignee: "ja", owner: "me" });
+    expect(parseQuery('assignee:"Jana Nováková" OWNER:x')).toMatchObject({ assignee: "Jana Nováková", owner: "x" });
+    expect(parseQuery("vlastnik:x").owner).toBe("x");
+    expect(isMe("Já")).toBe(true);
+    expect(isMe("ME")).toBe(true);
+    expect(isMe("Jana")).toBe(false);
+  });
+
+  it("parses date filters: today, Nd and an exact day", () => {
+    expect(parseQuery("upraveno:dnes vytvořeno:7d termín:2026-11-30").dates).toEqual([
+      { field: "updated", kind: "today", negated: false },
+      { field: "created", kind: "days", n: 7, negated: false },
+      { field: "due", kind: "day", day: "2026-11-30", negated: false },
+    ]);
+    expect(parseQuery("updated:TODAY created:vytvoreno due:3d").dates.map((d) => d.field + ":" + d.kind)).toEqual(["updated:today", "due:days"]);
+    expect(parseQuery("vytvoreno:30d termin:dnes").dates.map((d) => d.field)).toEqual(["created", "due"]);
+  });
+
+  it("keeps invalid date values as text", () => {
+    const q = parseQuery("upraveno:včera termín:2026-13-40 due:99999d");
+    expect(q.dates).toEqual([]);
+    expect(q.terms).toEqual(["upraveno:včera", "termín:2026-13-40", "due:99999d"]);
+  });
+
+  it("computes the day range relative to today", () => {
+    const [upd] = parseQuery("upraveno:7d").dates;
+    const [due] = parseQuery("termín:7d").dates;
+    const [day] = parseQuery("termín:2026-11-30").dates;
+    const [now] = parseQuery("created:dnes").dates;
+    expect(dateRange(upd, "2026-11-05")).toEqual({ from: "2026-10-29" });
+    expect(dateRange(due, "2026-11-05")).toEqual({ to: "2026-11-12" });
+    expect(dateRange(due, "2026-12-28")).toEqual({ to: "2027-01-04" });
+    expect(dateRange(day, "2026-11-05")).toEqual({ from: "2026-11-30", to: "2026-11-30" });
+    expect(dateRange(now, "2026-11-05")).toEqual({ from: "2026-11-05", to: "2026-11-05" });
+  });
+});
+
+describe("negation parsing", () => {
+  it("negates words, phrases and filters", () => {
+    const q = parseQuery('-smlouva střecha -"přesná fráze" -štítek:čekáme -klient:"Stavby X" -typ:dokument -po termínu -upraveno:7d -přiřazeno:já -vede:jan');
+    expect(q).toMatchObject({
+      terms: ["střecha"],
+      notTerms: ["smlouva", "přesná fráze"],
+      client: null,
+      label: null,
+      overdue: false,
+      types: [],
+      assignee: null,
+      owner: null,
+    });
+    expect(q.not).toEqual({ client: ["Stavby X"], label: ["čekáme"], assignee: ["já"], owner: ["jan"], types: ["document"], overdue: true });
+    expect(q.dates).toEqual([{ field: "updated", kind: "days", n: 7, negated: true }]);
+    expect(parseQuery("-overdue").not.overdue).toBe(true);
+    expect(parseQuery("-stitek:x").not.label).toEqual(["x"]);
+  });
+
+  it("treats a lone dash, inner dashes and invalid negated filters as text", () => {
+    expect(parseQuery("- e-mail").terms).toEqual(["-", "e-mail"]);
+    expect(parseQuery("-upraveno:včera").terms).toEqual(["-upraveno:včera"]);
+    expect(parseQuery("-typ:nic").terms).toEqual(["-typ:nic"]);
+  });
+
+  it("counts negations as search criteria", () => {
+    expect(hasCriteria(parseQuery("-smlouva"))).toBe(true);
+    expect(hasCriteria(parseQuery("-label:x"))).toBe(true);
+    expect(hasCriteria(parseQuery("upraveno:dnes"))).toBe(true);
+    expect(hasCriteria(parseQuery("přiřazeno:já"))).toBe(true);
+    expect(hasCriteria(parseQuery(""))).toBe(false);
+  });
+});
+
+describe("search history helpers", () => {
+  it("puts the newest first, removes duplicates and caps the list", () => {
+    expect(pushFront(["a", "b", "c"], "b", 5)).toEqual(["b", "a", "c"]);
+    expect(pushFront(["a", "b", "c"], "d", 3)).toEqual(["d", "a", "b"]);
+    expect(pushFront(["Střecha"], "střecha", 5, (x, y) => x.toLowerCase() === y.toLowerCase())).toEqual(["střecha"]);
+  });
+});
+
+describe("recent projects", () => {
+  it("returns the workspace's live projects in the requested order and drops the rest", async () => {
+    const ctx = await makeCtx();
+    const other = await makeCtx();
+    const a = await createProject(ctx, { name: "A" });
+    const b = await createProject(ctx, { name: "B", client: "Klient" });
+    const trashed = await createProject(ctx, { name: "Koš" });
+    await db.update(projects).set({ deletedAt: new Date() }).where(eq(projects.id, trashed.id));
+    const foreign = await createProject(other, { name: "Cizí" });
+    const r = await recentProjects(ctx, [b.id, foreign.id, trashed.id, a.id, crypto.randomUUID()]);
+    expect(r).toEqual([
+      { id: b.id, name: "B", client: "Klient", archived: false },
+      { id: a.id, name: "A", client: null, archived: false },
+    ]);
+    expect(await recentProjects(ctx, [])).toEqual([]);
+    await expect(recentProjects(ctx, ["nope"])).rejects.toThrow();
+  });
+});
+
+describe("person filters", () => {
+  it("finds tasks by assignee name or e-mail prefix, accent-insensitively, and projects with open assigned tasks", async () => {
+    const ctx = await makeCtx();
+    const jana = await member(ctx, "Jana Nováková", "jana.n");
+    const petr = await member(ctx, "Petr Dvořák", "pdvorak");
+    const a = await createProject(ctx, { name: "Dům", ownerId: petr.id });
+    const b = await createProject(ctx, { name: "Garáž" });
+    const c = await createProject(ctx, { name: "Zahrada" });
+    const t1 = await createTask(ctx, a.id, { title: "Okna", assigneeId: jana.id });
+    await createTask(ctx, a.id, { title: "Dveře", assigneeId: petr.id });
+    const done = await createTask(ctx, b.id, { title: "Vrata", assigneeId: jana.id });
+    await updateTask(ctx, done.id, { done: true, version: done.version });
+    await createTask(ctx, c.id, { title: "Plot" });
+
+    const byName = await search(ctx, "přiřazeno:novakova", { today: TODAY });
+    expect(byName.tasks.map((t) => t.id).sort()).toEqual([t1.id, done.id].sort());
+    expect(byName.projects.map((p) => p.id)).toEqual([a.id]); // Garáž only has a finished task
+    expect(byName.documents).toEqual([]);
+    expect(byName.query.assignee).toBe("novakova");
+
+    expect((await search(ctx, "assignee:JANA.N", { today: TODAY })).tasks).toHaveLength(2);
+    expect((await search(ctx, "prirazeno:pdvor okna", { today: TODAY })).tasks).toEqual([]);
+    expect((await search(ctx, "prirazeno:dvorak", { today: TODAY })).tasks.map((t) => t.title)).toEqual(["Dveře"]);
+    expect((await search(ctx, "prirazeno:nikdo", { today: TODAY })).projects).toEqual([]);
+  });
+
+  it("resolves já / me to the current member", async () => {
+    const ctx = await makeCtx();
+    const other = await member(ctx, "Někdo Jiný", "jiny");
+    const p = await createProject(ctx, { name: "Projekt", ownerId: ctx.membershipId });
+    const mine = await createTask(ctx, p.id, { title: "Moje", assigneeId: ctx.membershipId });
+    await createTask(ctx, p.id, { title: "Cizí", assigneeId: other.id });
+    for (const q of ["přiřazeno:já", "prirazeno:ja", "assignee:me"]) {
+      expect((await search(ctx, q, { today: TODAY })).tasks.map((t) => t.id)).toEqual([mine.id]);
+    }
+    expect((await search(ctx, "-assignee:me", { today: TODAY })).tasks.map((t) => t.title)).toEqual(["Cizí"]);
+    expect((await search(ctx, "vede:já", { today: TODAY })).projects.map((x) => x.id)).toEqual([p.id]);
+  });
+
+  it("filters by project owner across projects, their tasks and documents", async () => {
+    const ctx = await makeCtx();
+    const ivana = await member(ctx, "Ivana Černá", "ivana");
+    const a = await createProject(ctx, { name: "Střecha A", ownerId: ivana.id });
+    const b = await createProject(ctx, { name: "Střecha B" });
+    await createTask(ctx, a.id, { title: "Střecha úkol A" });
+    await createTask(ctx, b.id, { title: "Střecha úkol B" });
+    await db.insert(documents).values({ workspaceId: ctx.workspaceId, projectId: a.id, kind: "link", name: "Střecha výkres", url: "https://x.test" });
+    await db.insert(documents).values({ workspaceId: ctx.workspaceId, kind: "link", name: "Střecha bez projektu", url: "https://x.test" });
+
+    const r = await search(ctx, "vlastník:cerna strecha", { today: TODAY });
+    expect(r.projects.map((x) => x.id)).toEqual([a.id]);
+    expect(r.tasks.map((x) => x.title)).toEqual(["Střecha úkol A"]);
+    expect(r.documents.map((x) => x.name)).toEqual(["Střecha výkres"]);
+    expect((await search(ctx, "owner:test.local", { today: TODAY })).projects).toEqual([]); // e-mail prefix only, not any substring
+    expect((await search(ctx, "owner:iva", { today: TODAY })).projects.map((x) => x.id)).toEqual([a.id]);
+
+    const not = await search(ctx, "-vede:ivana strecha", { today: TODAY });
+    expect(not.projects.map((x) => x.id)).toEqual([b.id]);
+    expect(not.documents.map((x) => x.name)).toEqual(["Střecha bez projektu"]);
+  });
+
+  it("never matches members of another workspace", async () => {
+    const a = await makeCtx();
+    const b = await makeCtx();
+    const jana = await member(a, "Jana Cizí", "jana.cizi");
+    const p = await createProject(a, { name: "A projekt", ownerId: jana.id });
+    await createTask(a, p.id, { title: "A úkol", assigneeId: jana.id });
+    await createProject(b, { name: "B projekt" });
+    expect(await search(b, "prirazeno:jana", { today: TODAY })).toMatchObject({ projects: [], tasks: [] });
+    expect(await search(b, "vede:jana", { today: TODAY })).toMatchObject({ projects: [], tasks: [] });
+    expect((await search(a, "vede:jana", { today: TODAY })).projects).toHaveLength(1);
+  });
+});
+
+describe("date filters", () => {
+  it("filters by due date: today, within N days (overdue included, open items only) and exact day", async () => {
+    const ctx = await makeCtx();
+    const p = await createProject(ctx, { name: "Termíny", dueDate: "2026-11-20" });
+    const late = await createTask(ctx, p.id, { title: "T pozdě", dueDate: "2026-11-01" });
+    const now = await createTask(ctx, p.id, { title: "T dnes", dueDate: TODAY });
+    const soon = await createTask(ctx, p.id, { title: "T brzy", dueDate: "2026-11-10" });
+    await createTask(ctx, p.id, { title: "T později", dueDate: "2026-12-24" });
+    await createTask(ctx, p.id, { title: "T bez" });
+    const done = await createTask(ctx, p.id, { title: "T hotovo", dueDate: "2026-11-06" });
+    await updateTask(ctx, done.id, { done: true, version: done.version });
+    await db.insert(documents).values({ workspaceId: ctx.workspaceId, projectId: p.id, kind: "link", name: "T dokument", url: "https://x.test" });
+
+    const ids = async (q: string) => (await search(ctx, q, { today: TODAY })).tasks.map((t) => t.id).sort();
+    expect(await ids("termín:dnes")).toEqual([now.id]);
+    expect(await ids("due:7d")).toEqual([late.id, now.id, soon.id].sort());
+    expect(await ids("termin:2026-11-10")).toEqual([soon.id]);
+    expect(await ids("-due:7d T")).toEqual((await ids("T")).filter((id) => ![late.id, now.id, soon.id].includes(id)));
+    const r = await search(ctx, "termín:60d", { today: TODAY });
+    expect(r.documents).toEqual([]);
+    expect(r.projects.map((x) => x.id)).toEqual([p.id]);
+    expect((await search(ctx, "termín:3d", { today: TODAY })).projects).toEqual([]); // project due 2026-11-20
+  });
+
+  it("filters by created and updated day in the viewer's time zone", async () => {
+    const ctx = await makeCtx();
+    const old = await createProject(ctx, { name: "Starý" });
+    const fresh = await createProject(ctx, { name: "Nový" });
+    await db.update(projects).set({ createdAt: new Date("2026-10-01T12:00:00Z"), updatedAt: new Date("2026-10-02T12:00:00Z") }).where(eq(projects.id, old.id));
+    await db.update(projects).set({ createdAt: new Date("2026-11-05T09:00:00Z"), updatedAt: new Date("2026-11-04T23:30:00Z") }).where(eq(projects.id, fresh.id));
+    await db.insert(documents).values({ workspaceId: ctx.workspaceId, kind: "link", name: "Doc nový", url: "https://x.test", createdAt: new Date("2026-11-05T10:00:00Z") });
+
+    const names = async (q: string, tz?: string) => (await search(ctx, q, { today: TODAY, tz })).projects.map((x) => x.name);
+    expect(await names("vytvořeno:dnes")).toEqual(["Nový"]);
+    expect(await names("created:7d")).toEqual(["Nový"]);
+    expect(await names("created:60d")).toEqual(["Nový", "Starý"]);
+    expect(await names("vytvoreno:2026-10-01")).toEqual(["Starý"]);
+    expect(await names("upraveno:dnes")).toEqual([]); // 23:30 UTC on the 4th
+    expect(await names("upraveno:dnes", "Europe/Prague")).toEqual(["Nový"]); // already the 5th in Prague
+    expect(await names("upraveno:dnes", "Not/AZone")).toEqual([]); // unknown zone falls back to UTC
+    expect(await names("-created:dnes")).toEqual(["Starý"]);
+    expect((await search(ctx, "typ:dokument vytvořeno:dnes", { today: TODAY })).documents.map((d) => d.name)).toEqual(["Doc nový"]);
+  });
+});
+
+describe("negation in search", () => {
+  it("excludes words, labels, clients and types, and keeps items missing the field", async () => {
+    const ctx = await makeCtx();
+    const a = await createProject(ctx, { name: "Dům smlouva", client: "Novák" });
+    const b = await createProject(ctx, { name: "Dům plán" });
+    const c = await createProject(ctx, { name: "Dům poznámka" });
+    await db.update(projects).set({ notes: "Podepsaná smlouva" }).where(eq(projects.id, c.id));
+    await label(ctx, b.id, "Čekáme");
+    await createTask(ctx, a.id, { title: "Dům úkol smlouva" });
+    await createTask(ctx, a.id, { title: "Dům úkol" });
+    await db.insert(documents).values({ workspaceId: ctx.workspaceId, kind: "link", name: "Dům dokument", url: "https://x.test" });
+
+    const names = async (q: string) => (await search(ctx, q, { today: TODAY })).projects.map((x) => x.name).sort();
+    expect(await names("dum -smlouva")).toEqual(["Dům plán"]); // name and notes both count
+    expect(await names("dum -štítek:čekáme")).toEqual(["Dům poznámka", "Dům smlouva"]);
+    expect(await names("dum -klient:novak")).toEqual(["Dům plán", "Dům poznámka"]); // no client: not excluded
+    expect(await names('dum -"podepsaná smlouva"')).toEqual(["Dům plán", "Dům smlouva"]);
+    expect((await search(ctx, "dum -smlouva", { today: TODAY })).tasks.map((t) => t.title)).toEqual(["Dům úkol"]);
+    const noDocs = await search(ctx, "dum -typ:dokument", { today: TODAY });
+    expect(noDocs.documents).toEqual([]);
+    expect(noDocs.projects).toHaveLength(3);
+    expect((await search(ctx, "dum -typ:dokument -typ:úkol", { today: TODAY })).tasks).toEqual([]);
+    expect((await search(ctx, "-dum", { today: TODAY })).projects).toEqual([]);
+  });
+
+  it("works with only negations, and excludes overdue", async () => {
+    const ctx = await makeCtx();
+    const p = await createProject(ctx, { name: "Alfa", dueDate: "2026-10-01" });
+    await createProject(ctx, { name: "Beta", dueDate: "2026-12-01" });
+    await createProject(ctx, { name: "Gama" });
+    await createTask(ctx, p.id, { title: "Pozdě", dueDate: "2026-10-01" });
+    await createTask(ctx, p.id, { title: "Včas", dueDate: "2026-12-01" });
+    expect((await search(ctx, "-alfa", { today: TODAY })).projects.map((x) => x.name).sort()).toEqual(["Beta", "Gama"]);
+    const r = await search(ctx, "-po termínu", { today: TODAY });
+    expect(r.projects.map((x) => x.name).sort()).toEqual(["Beta", "Gama"]);
+    expect(r.tasks.map((x) => x.title)).toEqual(["Včas"]);
+    expect((await search(ctx, "-overdue", { today: TODAY })).projects).toHaveLength(2);
+  });
+
+  it("keeps trash excluded and stays inside the workspace", async () => {
+    const a = await makeCtx();
+    const b = await makeCtx();
+    const p = await createProject(a, { name: "Koš A" });
+    await createProject(b, { name: "Jiný B" });
+    await db.update(projects).set({ deletedAt: new Date() }).where(eq(projects.id, p.id));
+    expect((await search(a, "-zzz", { today: TODAY })).projects).toEqual([]);
+    expect((await search(b, "-zzz", { today: TODAY })).projects.map((x) => x.name)).toEqual(["Jiný B"]);
+  });
+});

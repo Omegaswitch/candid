@@ -124,6 +124,8 @@ export const tasks = pgTable(
     index("tasks_ws_assignee_idx").on(t.workspaceId, t.assigneeId, t.done),
     index("tasks_ws_due_idx").on(t.workspaceId, t.dueDate),
     index("tasks_ws_waiting_idx").on(t.workspaceId).where(sql`${t.waiting} and not ${t.done}`),
+    // Open tasks only (a small slice once projects finish): sidebar counts and the cross-project views.
+    index("tasks_ws_open_due_idx").on(t.workspaceId, t.dueDate).where(sql`not ${t.done} and ${t.deletedAt} is null`),
   ],
 );
 

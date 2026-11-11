@@ -1,11 +1,29 @@
 "use client";
 
-import { ProjectPanel } from "@/components/project-detail/project-panel";
+import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useRef } from "react";
+import { projectQuery } from "@/hooks/project-detail";
 import { useProjects } from "@/hooks/queries";
 import { t } from "@/i18n";
 import { hasUnsaved } from "@/lib/unsaved";
+
+// The panel (checklist, drag and drop, notes, documents, animations) is a separate chunk: it is
+// fetched when the browser is idle after the list renders, so opening a project is still instant
+// but the list does not wait for it.
+const loadPanel = () => import("@/components/project-detail/project-panel");
+const ProjectPanel = dynamic(() => loadPanel().then((m) => m.ProjectPanel), {
+  loading: () => (
+    <div className="grid gap-3 p-5 pr-14" aria-busy aria-label={t.common.loading}>
+      <Skeleton className="h-5 w-2/3" />
+      <Skeleton className="h-3.5 w-1/3" />
+    </div>
+  ),
+});
+const whenIdle = (fn: () => void) =>
+  typeof window.requestIdleCallback === "function" ? window.requestIdleCallback(fn, { timeout: 2000 }) : window.setTimeout(fn, 200);
 
 /** The project side panel, on the right so the list behind it stays in view. Escape closes it. */
 export function ProjectSheet({ projectId, onClose }: { projectId: string | null; onClose: () => void }) {
@@ -13,9 +31,15 @@ export function ProjectSheet({ projectId, onClose }: { projectId: string | null;
   const name = projects.data?.find((p) => p.id === projectId)?.name ?? t.projects.panelTitle;
   // The panel opens from a card or a row, not a Radix trigger, so focus is put back by hand.
   const opener = useRef<HTMLElement | null>(null);
+  const qc = useQueryClient();
   useEffect(() => {
     if (projectId) opener.current = document.activeElement as HTMLElement | null;
-  }, [projectId]);
+    // Data and code in parallel: on a direct /projects/<id> load the fetch must not wait for the chunk.
+    if (projectId) void qc.prefetchQuery(projectQuery(projectId));
+  }, [projectId, qc]);
+  useEffect(() => {
+    whenIdle(() => void loadPanel());
+  }, []);
   const close = () => {
     if (hasUnsaved() && !window.confirm(t.common.unsavedLeave)) return;
     onClose();

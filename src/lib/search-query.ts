@@ -7,6 +7,13 @@
  *   štítek:/stitek:/label:X   project has a label whose name contains X
  *   typ:/type:projekt|úkol|dokument (project|task|document)   limit the result groups
  *   po termínu / overdue      only overdue (open, past due date) projects and tasks
+ *   přiřazeno:/prirazeno:/assignee:X   tasks assigned to a member (name or e-mail prefix); projects with
+ *                              such open tasks. já / ja / me = the current member
+ *   vede:/vlastník:/owner:X    projects owned by a member (and their tasks and documents)
+ *   upraveno:/updated:, vytvořeno:/created:   dnes|today, 7d (last 7 days), 2026-11-05
+ *   termín:/termin:/due:       dnes|today, 7d (due within 7 days, overdue included), 2026-11-05;
+ *                              only open items
+ * A leading "-" negates a word, phrase or filter: -smlouva  -štítek:čekáme  -typ:dokument  -"po termínu".
  * Filter values may be quoted: klient:"Stavby Novák".
  *   "přesná fráze"             a double-quoted phrase is one term: it must appear exactly as typed
  *                              (case and accents ignored)
@@ -14,14 +21,32 @@
 
 export type SearchType = "project" | "task" | "document";
 
+export type DateField = "updated" | "created" | "due";
+export type DateFilter = {
+  field: DateField;
+  /** "today"; "days" (last / next `n` days); "day" (the exact `day`). */
+  kind: "today" | "days" | "day";
+  n?: number;
+  day?: string;
+  negated: boolean;
+};
+
 export type ParsedQuery = {
   /** Free-text words, in the order typed (original spelling). */
   terms: string[];
+  /** Words that must NOT appear (`-word`). */
+  notTerms: string[];
   client: string | null;
   label: string | null;
   /** Empty = all groups. */
   types: SearchType[];
   overdue: boolean;
+  /** Member name / e-mail prefix, or "me". */
+  assignee: string | null;
+  owner: string | null;
+  dates: DateFilter[];
+  /** Negated filters (`-klient:x`). */
+  not: { client: string[]; label: string[]; assignee: string[]; owner: string[]; types: SearchType[]; overdue: boolean };
 };
 
 const MAX_TERMS = 6;
@@ -52,7 +77,19 @@ function fold(s: string) {
   return out;
 }
 
-const KEYS: Record<string, "client" | "label" | "type"> = {
+type Key = "client" | "label" | "type" | "assignee" | "owner" | DateField;
+const KEYS: Record<string, Key> = {
+  prirazeno: "assignee",
+  assignee: "assignee",
+  vede: "owner",
+  vlastnik: "owner",
+  owner: "owner",
+  upraveno: "updated",
+  updated: "updated",
+  vytvoreno: "created",
+  created: "created",
+  termin: "due",
+  due: "due",
   klient: "client",
   client: "client",
   stitek: "label",
@@ -82,59 +119,149 @@ const TYPES: Record<string, SearchType> = {
   file: "document",
 };
 
-// key:"quoted value" | key:value | "quoted phrase" | word
-const TOKEN = /([^\s:"]+):"([^"]*)"?|([^\s:"]+):([^\s"]+)|"([^"]*)"?|(\S+)/g;
+// [-]key:"quoted value" | [-]key:value | [-]"quoted phrase" | [-]word
+const TOKEN = /(-?)(?:([^\s:"]+):"([^"]*)"?|([^\s:"]+):([^\s"]+)|"([^"]*)"?|(\S+))/g;
+
+const ME = new Set(["ja", "me"]);
+/** `já` / `me`: the current member. */
+export const isMe = (value: string) => ME.has(fold(value.trim()));
+
+const MAX_DAYS = 3650;
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function validDay(v: string) {
+  const m = ISO_DAY.exec(v);
+  if (!m) return false;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
+/** `dnes`/`today`, `7d` or `YYYY-MM-DD`; null when the value is none of those. */
+function parseDateValue(field: DateField, value: string, negated: boolean): DateFilter | null {
+  const v = fold(value.trim());
+  if (v === "dnes" || v === "today") return { field, kind: "today", negated };
+  const days = /^(\d{1,4})d$/.exec(v);
+  if (days && Number(days[1]) <= MAX_DAYS) return { field, kind: "days", n: Number(days[1]), negated };
+  if (validDay(v)) return { field, kind: "day", day: v, negated };
+  return null;
+}
+
+export function addDays(iso: string, n: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * The inclusive day range a date filter covers, relative to the viewer's `today`.
+ * updated/created: "7d" = since 7 days ago (up to now); due: "7d" = up to 7 days ahead, overdue included.
+ */
+export function dateRange(f: DateFilter, today: string): { from?: string; to?: string } {
+  if (f.kind === "today") return { from: today, to: today };
+  if (f.kind === "day") return { from: f.day, to: f.day };
+  const n = f.n ?? 0;
+  return f.field === "due" ? { to: addDays(today, n) } : { from: addDays(today, -n) };
+}
 
 export function parseQuery(raw: string): ParsedQuery {
-  const out: ParsedQuery = { terms: [], client: null, label: null, types: [], overdue: false };
+  const out: ParsedQuery = {
+    terms: [],
+    notTerms: [],
+    client: null,
+    label: null,
+    types: [],
+    overdue: false,
+    assignee: null,
+    owner: null,
+    dates: [],
+    not: { client: [], label: [], assignee: [], owner: [], types: [], overdue: false },
+  };
   // "po termínu" is two words; find it on the folded text and cut it from the original (same indexes).
   let text = raw;
   const f = fold(text);
-  const phrase = /(^|\s)po\s+terminu(?=\s|$)/g;
+  const phrase = /(^|\s)(-?)po\s+terminu(?=\s|$)/g;
   let m: RegExpExecArray | null;
   const cuts: [number, number][] = [];
-  while ((m = phrase.exec(f))) cuts.push([m.index + m[1].length, m.index + m[0].length]);
+  while ((m = phrase.exec(f))) {
+    cuts.push([m.index + m[1].length, m.index + m[0].length]);
+    if (m[2]) out.not.overdue = true;
+    else out.overdue = true;
+  }
   for (const [a, b] of cuts.reverse()) text = text.slice(0, a) + " " + text.slice(b);
-  if (cuts.length) out.overdue = true;
 
   for (const t of text.matchAll(TOKEN)) {
-    const key = t[1] ?? t[3];
-    const value = (t[2] ?? t[4] ?? "").trim();
+    const neg = t[1] === "-";
+    const key = t[2] ?? t[4];
+    const value = (t[3] ?? t[5] ?? "").trim();
     const kind = key ? KEYS[fold(key)] : undefined;
     if (kind && value) {
-      if (kind === "client") out.client = value;
-      else if (kind === "label") out.label = value;
-      else {
-        const type = TYPES[fold(value)];
-        if (type && !out.types.includes(type)) out.types.push(type);
-        else if (!type) pushTerms(out, t[0]);
-      }
+      if (applyFilter(out, kind, value, neg)) continue;
+      pushTerms(out, t[0], false); // not a valid filter value: plain text, dash and all
       continue;
     }
-    if (t[5] !== undefined) {
-      pushTerm(out, t[5].replace(/\s+/g, " ").trim());
+    if (t[6] !== undefined) {
+      pushTerm(out, t[6].replace(/\s+/g, " ").trim(), neg);
       continue;
     }
-    const word = t[6] ?? t[0];
-    if (t[6] !== undefined && fold(word) === "overdue") {
-      out.overdue = true;
+    const word = t[7] ?? t[0];
+    if (fold(word) === "overdue") {
+      if (neg) out.not.overdue = true;
+      else out.overdue = true;
       continue;
     }
-    pushTerms(out, word);
+    pushTerms(out, word, neg);
   }
   return out;
 }
 
-function pushTerm(out: ParsedQuery, term: string) {
-  if (!term || out.terms.length >= MAX_TERMS) return;
-  if (!out.terms.some((x) => fold(x) === fold(term))) out.terms.push(term);
+/** Applies `kind:value`; false when the value is not valid for the filter. */
+function applyFilter(out: ParsedQuery, kind: Key, value: string, neg: boolean) {
+  switch (kind) {
+    case "client":
+    case "label":
+    case "assignee":
+    case "owner":
+      if (neg) out.not[kind].push(value);
+      else out[kind] = value;
+      return true;
+    case "type": {
+      const type = TYPES[fold(value)];
+      if (!type) return false;
+      const list = neg ? out.not.types : out.types;
+      if (!list.includes(type)) list.push(type);
+      return true;
+    }
+    default: {
+      const d = parseDateValue(kind, value, neg);
+      if (!d) return false;
+      if (out.dates.length < 6) out.dates.push(d);
+      return true;
+    }
+  }
 }
 
-function pushTerms(out: ParsedQuery, text: string) {
-  for (const w of text.split(/\s+/)) pushTerm(out, w.trim());
+function pushTerm(out: ParsedQuery, term: string, neg: boolean) {
+  const list = neg ? out.notTerms : out.terms;
+  if (!term || list.length >= MAX_TERMS) return;
+  if (!list.some((x) => fold(x) === fold(term))) list.push(term);
 }
 
-export const hasCriteria = (q: ParsedQuery) => q.terms.length > 0 || !!q.client || !!q.label || q.overdue || q.types.length > 0;
+function pushTerms(out: ParsedQuery, text: string, neg: boolean) {
+  for (const w of text.split(/\s+/)) pushTerm(out, w.trim(), neg);
+}
+
+export const hasCriteria = (q: ParsedQuery) =>
+  q.terms.length > 0 ||
+  q.notTerms.length > 0 ||
+  !!q.client ||
+  !!q.label ||
+  !!q.assignee ||
+  !!q.owner ||
+  q.overdue ||
+  q.types.length > 0 ||
+  q.dates.length > 0 ||
+  q.not.client.length + q.not.label.length + q.not.assignee.length + q.not.owner.length + q.not.types.length > 0 ||
+  q.not.overdue;
 
 export type Segment = { text: string; match: boolean };
 

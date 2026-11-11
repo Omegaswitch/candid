@@ -43,6 +43,13 @@
       "when": 1794410569959,
       "tag": "0005_oauth",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794413819391,
+      "tag": "0006_open_tasks_index",
+      "breakpoints": true
     }
   ]
 }

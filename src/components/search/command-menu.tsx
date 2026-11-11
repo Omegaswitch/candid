@@ -10,6 +10,7 @@ import {
   Download,
   FileText,
   FolderKanban,
+  History,
   Hourglass,
   ListChecks,
   Monitor,
@@ -21,18 +22,19 @@ import {
   Upload,
   type LucideIcon,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommandDialog, Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { fmt, t } from "@/i18n";
 import { api } from "@/lib/api";
 import { formatDay, todayLocal } from "@/lib/dates";
-import { highlight } from "@/lib/search-query";
+import { highlight, type ParsedQuery } from "@/lib/search-query";
+import { clearSearchHistory, readRecentProjects, readRecentQueries, rememberProject, rememberQuery } from "@/lib/search-history";
 import { isTypingTarget } from "@/lib/keyboard";
-import type { SearchResults, Snippet } from "@/server/search";
+import type { RecentProject, SearchResults, Snippet } from "@/server/search";
 
 // A lazy view of the active locale (see src/i18n/index.ts), safe at module level.
 const s = t.search;
@@ -62,15 +64,27 @@ const ACTIONS: Entry[] = [
 /** Same folding as the server: case and diacritics ignored. */
 const fold = (v: string) => v.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
+const PROJECT_PATH = /^\/projects\/([^/?#]+)/;
+const timeZone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "";
+  }
+};
+
 const subscribeNone = () => () => {};
 const isMac = () => /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent);
 
 export function CommandMenu() {
   const router = useRouter();
+  const pathname = usePathname();
   const { setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
+  // Bumped when the stored history changes, so the lists below are re-read.
+  const [historyVersion, setHistoryVersion] = useState(0);
   // Server render cannot know the platform; the client corrects it after hydration.
   const mac = useSyncExternalStore(subscribeNone, isMac, () => false);
 
@@ -88,6 +102,12 @@ export function CommandMenu() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Every project page visited is remembered for "Recently opened".
+  useEffect(() => {
+    const id = PROJECT_PATH.exec(pathname)?.[1];
+    if (id) rememberProject(id);
+  }, [pathname]);
+
   const term = q.trim().slice(0, 100);
   useEffect(() => {
     const id = setTimeout(() => setDebounced(term), 150);
@@ -97,23 +117,44 @@ export function CommandMenu() {
   const results = useQuery({
     queryKey: ["search", debounced],
     queryFn: ({ signal }) =>
-      api<SearchResults>(`/api/search?q=${encodeURIComponent(debounced)}&today=${todayLocal()}`, { signal }),
+      api<SearchResults>(`/api/search?q=${encodeURIComponent(debounced)}&today=${todayLocal()}&tz=${encodeURIComponent(timeZone())}`, { signal }),
     enabled: open && debounced.length > 0,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 
+  // Read while open only: the server render and the first client render both see an empty history.
+  const recentIds = useMemo(() => (open ? readRecentProjects() : []), [open, historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recentQueries = useMemo(() => (open ? readRecentQueries() : []), [open, historyVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recent = useQuery({
+    queryKey: ["search", "recent", recentIds],
+    queryFn: ({ signal }) => api<{ projects: RecentProject[] }>(`/api/search?recent=${recentIds.join(",")}`, { signal }),
+    enabled: open && !term && recentIds.length > 0,
+    placeholderData: keepPreviousData,
+    staleTime: 10_000,
+  });
+  const recentProjects = !term ? (recent.data?.projects ?? []) : [];
+
   const changeOpen = (next: boolean) => {
     setOpen(next);
     if (!next) setQ("");
   };
-  const run = (entry: Entry) => {
+  /** Closes the menu; a query that led to a result or command is remembered. */
+  const leave = () => {
+    rememberQuery(term);
     changeOpen(false);
+  };
+  const run = (entry: Entry) => {
+    leave();
     entry.run((href) => router.push(href), setTheme);
   };
   const go = (href: string) => {
-    changeOpen(false);
+    leave();
     router.push(href);
+  };
+  const clearHistory = () => {
+    clearSearchHistory();
+    setHistoryVersion((v) => v + 1);
   };
 
   const f = fold(term);
@@ -167,6 +208,39 @@ export function CommandMenu() {
                 </Button>
               </div>
             )}
+            {!term && (recentProjects.length > 0 || recentQueries.length > 0) && (
+              <>
+                {recentProjects.length > 0 && (
+                  <CommandGroup heading={s.recent}>
+                    {recentProjects.map((p) => (
+                      <CommandItem key={p.id} value={`recent:${p.id}`} onSelect={() => go(`/projects/${p.id}`)}>
+                        <FolderKanban strokeWidth={1.6} className="text-muted-foreground" />
+                        <span className="truncate">{p.name}</span>
+                        {p.client && <span className="truncate text-xs text-muted-foreground">{p.client}</span>}
+                        {p.archived && (
+                          <span className="ml-auto shrink-0 rounded-sm bg-pill-neutral px-1.5 text-xs leading-5 text-pill-neutral-ink">{s.archived}</span>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+                {recentQueries.length > 0 && (
+                  <CommandGroup heading={s.history}>
+                    {recentQueries.map((rq) => (
+                      <CommandItem key={rq} value={`query:${rq}`} onSelect={() => setQ(rq)}>
+                        <History strokeWidth={1.6} className="text-muted-foreground" />
+                        <span className="truncate">{rq}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+                <CommandGroup>
+                  <CommandItem value="history:clear" onSelect={clearHistory} aria-label={s.clearRecentLabel}>
+                    <span className="text-xs text-muted-foreground">{s.clearRecent}</span>
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
             {data && <QueryChips query={data.query} />}
             {showEmpty && <Status>{fmt(s.noMatches, { q: term })}</Status>}
 
@@ -203,7 +277,7 @@ export function CommandMenu() {
                     )}
                     <ResultBody snippet={t.snippet} terms={terms}>
                       <span className={t.done ? "truncate text-muted-foreground line-through" : "truncate"}>{hl(t.title)}</span>
-                      {t.dueDate && data.query.overdue && <span className="shrink-0 text-xs text-negative">{formatDay(t.dueDate)}</span>}
+                      {t.dueDate && (data.query.overdue || data.query.dates.some((d) => d.field === "due")) && <span className="shrink-0 text-xs text-negative">{formatDay(t.dueDate)}</span>}
                     </ResultBody>
                     <span className="ml-auto max-w-[40%] shrink-0 self-start truncate text-xs text-muted-foreground">{t.projectName}</span>
                   </CommandItem>
@@ -230,7 +304,13 @@ export function CommandMenu() {
 
             <StaticGroup heading={s.groups.navigation} entries={nav} onRun={run} />
             <StaticGroup heading={s.groups.actions} entries={actions} onRun={run} />
-            {!term && <p className="px-3 pt-1 pb-2 text-xs text-muted-foreground">{s.syntaxHint}</p>}
+            {!term && (
+              <p className="px-3 pt-1 pb-2 text-xs text-muted-foreground">
+                {s.syntaxHint}
+                <br />
+                {s.syntaxExample}
+              </p>
+            )}
           </CommandList>
         </Command>
       </CommandDialog>
@@ -294,18 +374,36 @@ function ResultBody({ children, snippet, terms }: { children: ReactNode; snippet
   );
 }
 
-function QueryChips({ query }: { query: SearchResults["query"] }) {
+function dateValue(d: ParsedQuery["dates"][number]) {
+  return d.kind === "today" ? s.filters.today : d.kind === "days" ? `${d.n}d` : d.day!;
+}
+
+function QueryChips({ query }: { query: ParsedQuery }) {
+  const no = (text: string) => `${s.filters.not}: ${text}`;
   const chips = [
     query.client && `${s.filters.client}: ${query.client}`,
     query.label && `${s.filters.label}: ${query.label}`,
+    query.assignee && `${s.filters.assignee}: ${query.assignee}`,
+    query.owner && `${s.filters.owner}: ${query.owner}`,
     ...query.types.map((t) => s.types[t]),
     query.overdue && s.filters.overdue,
+    ...query.dates.map((d) => {
+      const text = `${s.filters[d.field]}: ${dateValue(d)}`;
+      return d.negated ? no(text) : text;
+    }),
+    ...query.not.client.map((v) => no(`${s.filters.client}: ${v}`)),
+    ...query.not.label.map((v) => no(`${s.filters.label}: ${v}`)),
+    ...query.not.assignee.map((v) => no(`${s.filters.assignee}: ${v}`)),
+    ...query.not.owner.map((v) => no(`${s.filters.owner}: ${v}`)),
+    ...query.not.types.map((t) => no(s.types[t])),
+    query.not.overdue && no(s.filters.overdue),
+    ...query.notTerms.map((v) => no(v)),
   ].filter(Boolean) as string[];
   if (!chips.length) return null;
   return (
     <div className="flex flex-wrap gap-1 px-2 pt-2 pb-1">
-      {chips.map((c) => (
-        <span key={c} className="rounded-sm bg-pill-neutral px-1.5 text-xs leading-5 text-pill-neutral-ink">
+      {chips.map((c, i) => (
+        <span key={`${i}:${c}`} className="rounded-sm bg-pill-neutral px-1.5 text-xs leading-5 text-pill-neutral-ink">
           {c}
         </span>
       ))}

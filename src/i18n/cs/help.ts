@@ -80,6 +80,8 @@ export const help: Localized<typeof en> = {
         "Stiskněte Ctrl / ⌘ + K (nebo /) a pište. Projekty, kroky i dokumenty se najdou bez ohledu na velká písmena a diakritiku.",
         "Každé slovo musí v nálezu někde být. Slova v\u00a0uvozovkách vyhledají přesnou frázi, např. „schůzka s\u00a0klientem“.",
         "Filtry: klient:Název, štítek:Název, typ:projekt|úkol|dokument a po termínu. Hodnoty s\u00a0mezerou dejte do uvozovek: klient:\"Stavby Novák\".",
+        "Lidé: přiřazeno:Jana (kroky přiřazené Janě), vede:Jana (vlastník projektu); jméno nebo začátek e-mailu, já = vy. Data: upraveno:dnes, vytvořeno:7d, termín:7d (do 7 dnů včetně po termínu) nebo termín:2026-11-30.",
+        "Pomlčka vyloučí: -smlouva, -štítek:čekáme, -typ:dokument. V\u00a0prázdném hledání uvidíte naposledy otevřené projekty a poslední hledání.",
       ],
     },
     {
