@@ -14,7 +14,7 @@ export function UserMenu() {
   async function signOut() {
     if (s.authMode === "dev") {
       await fetch("/api/dev/sign-in", { method: "DELETE" });
-      window.location.href = "/sign-in";
+      window.location.assign(new URL("/sign-in", window.location.origin));
       return;
     }
     const { Clerk } = window as unknown as { Clerk?: { signOut: (o: { redirectUrl: string }) => Promise<void> } };

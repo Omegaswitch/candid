@@ -27,14 +27,20 @@ export function ImportExportMenu() {
   const router = useRouter();
   const viewIds = pathname === "/" ? getViewIds() : null;
 
-  // The command menu opens these via /?import=1 and /?export=1.
+  // The command menu opens these via /?import=1 and /?export=1: open once per request (during
+  // render, not in an effect), then drop the parameter from the address.
+  const want = params.get("import") === "1" ? "import" : params.get("export") === "1" ? "export" : null;
+  const [handled, setHandled] = useState<typeof want>(null);
+  if (want !== handled) {
+    setHandled(want);
+    if (want) {
+      if (want === "import") setSession((n) => n + 1);
+      setOpen(want);
+    }
+  }
   useEffect(() => {
-    const want = params.get("import") === "1" ? "import" : params.get("export") === "1" ? "export" : null;
-    if (!want) return;
-    if (want === "import") setSession((n) => n + 1);
-    setOpen(want);
-    router.replace(pathname ?? "/");
-  }, [params, pathname, router]);
+    if (want) router.replace(pathname ?? "/");
+  }, [want, pathname, router]);
 
   return (
     <>

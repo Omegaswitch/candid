@@ -54,7 +54,7 @@ export function ClientView({ name }: { name: string }) {
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">{data?.name ?? name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {data ? (data.lastActivityAt ? fmt(c.lastActivity, { date: formatDay(data.lastActivityAt.slice(0, 10), today) ?? "" }) : c.noActivity) : c.subline}
+            {data ? (data.lastActivityAt ? fmt(c.lastActivity, { date: formatDay(todayLocal(new Date(data.lastActivityAt)), today) ?? "" }) : c.noActivity) : c.subline}
           </p>
         </header>
       </div>

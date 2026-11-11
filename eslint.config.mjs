@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agent tooling and a vendored, minified worker script: not app code.
+    ".agents/**",
+    ".taste-skill/**",
+    "public/browser-image-compression.js",
   ]),
 ]);
 

@@ -14,7 +14,7 @@ import { arrayMove, rectSortingStrategy, SortableContext, sortableKeyboardCoordi
 import { CSS } from "@dnd-kit/utilities";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Counter from "@/components/Counter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +31,7 @@ import { DuplicateDialog } from "./duplicate-dialog";
 import { type CardActions, ProjectCard } from "./project-card";
 import { activeFilterCount, type Filters, NO_FILTERS, ProjectToolbar } from "./project-filters";
 import { useSession } from "@/components/app/session";
+import { useHydrated } from "@/hooks/hydrated";
 import { FollowUpsDue } from "./follow-ups-due";
 import { ProjectSheet } from "./project-sheet";
 import { ProjectTable } from "./project-table";
@@ -78,7 +79,13 @@ export function Dashboard() {
   const setPinned = useSetPinned();
   const setArchived = useSetArchived();
   const openId = useOpenProjectId();
-  const me = useSession().membershipId;
+  const session = useSession();
+  const me = session.membershipId;
+  // Without a seeded cache the server rendered skeletons. The sidebar hydrates first and fetches the
+  // same queries, so the answer can land before this page hydrates: hold it back until hydration is
+  // over, or the first client render would not match the server HTML.
+  const hydrated = useHydrated();
+  const ready = hydrated || !!session.seeded;
   const [duplicating, setDuplicating] = useState<ProjectSummary | null>(null);
   const today = todayLocal();
 
@@ -90,7 +97,8 @@ export function Dashboard() {
   const memberName = useMemo(() => new Map((members.data ?? []).map((m) => [m.id, m.name])), [members.data]);
   const ownerName = useCallback((id: string | null) => (id ? (memberName.get(id) ?? null) : null), [memberName]);
 
-  const all = projects.data;
+  const all = ready ? projects.data : undefined;
+  const countsData = ready ? counts.data : undefined;
   const labels = useLabels();
   // A deleted label left in saved filters must not hide every project.
   const labelExists = !labels.data || labels.data.some((l) => l.id === filters.labelId);
@@ -116,9 +124,9 @@ export function Dashboard() {
     const lateTasks = late.reduce((s, p) => s + p.overdueCount, 0);
     if (lateTasks)
       return fmt(t.projects.findingOverdue, { tasks: plural(lateTasks, t.projects.tasksN), projects: plural(late.length, t.projects.projectsN) });
-    const week = counts.data?.dueThisWeek ?? 0;
+    const week = countsData?.dueThisWeek ?? 0;
     return week ? fmt(t.projects.findingDueSoon, { tasks: plural(week, t.projects.tasksN) }) : t.projects.findingClear;
-  }, [all, counts.data?.dueThisWeek]);
+  }, [all, countsData?.dueThisWeek]);
 
   const canReorder = sort === "manual" && !filtered;
 
@@ -144,6 +152,8 @@ export function Dashboard() {
   const open = useCallback((id: string) => window.history.pushState(null, "", `/projects/${id}`), []);
   const close = useCallback(() => window.history.replaceState(null, "", "/"), []);
 
+  // `mutate` is stable (the mutation object is not), so callbacks built on it stay stable too.
+  const reorderMutate = reorder.mutate;
   const move = useCallback(
     (id: string, delta: -1 | 1) => {
       if (!all) return;
@@ -151,10 +161,15 @@ export function Dashboard() {
       const from = ids.indexOf(id);
       const to = from + delta;
       if (from < 0 || to < 0 || to >= ids.length) return;
-      reorder.mutate(arrayMove(ids, from, to));
+      reorderMutate(arrayMove(ids, from, to));
     },
-    [all, reorder],
+    [all, reorderMutate],
   );
+  // Read when archiving, not a dependency: opening or closing the panel must not re-render every card.
+  const openIdRef = useRef(openId);
+  useEffect(() => {
+    openIdRef.current = openId;
+  });
 
   const actions: CardActions = useMemo(
     () => ({
@@ -162,14 +177,14 @@ export function Dashboard() {
       pin: (p) => setPinned.mutate({ id: p.id, pinned: !p.pinned }),
       duplicate: setDuplicating,
       archive: (p) => {
-        if (openId === p.id) close();
+        if (openIdRef.current === p.id) close();
         setArchived.mutate({ id: p.id, archived: true, name: p.name });
       },
       move: canReorder ? move : undefined,
     }),
     // Mutation objects change identity every render; their `mutate` is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [open, close, openId, canReorder, move],
+    [open, close, canReorder, move],
   );
 
   const setFilters = (f: Filters) => savePrefs.mutate({ filters: f });
@@ -185,8 +200,8 @@ export function Dashboard() {
         </div>
         <div role="group" aria-label={t.projects.counts.label} className="-mx-2.5 grid grid-cols-3 sm:flex sm:gap-1">
           <CountLink value={activeCount} label={t.projects.counts.active} onClick={showActive} title={t.projects.counts.activeHint} />
-          <CountLink value={counts.data?.overdue} label={t.projects.counts.overdue} href="/overdue" negative />
-          <CountLink value={counts.data?.dueThisWeek} label={t.projects.counts.dueWeek} href="/due-soon" />
+          <CountLink value={countsData?.overdue} label={t.projects.counts.overdue} href="/overdue" negative />
+          <CountLink value={countsData?.dueThisWeek} label={t.projects.counts.dueWeek} href="/due-soon" />
         </div>
       </header>
 
@@ -259,7 +274,7 @@ export function Dashboard() {
       ) : view === "board" ? (
         <ProjectBoard projects={shown} today={today} actions={actions} />
       ) : canReorder ? (
-        <SortableGrid projects={shown} ownerName={ownerName} today={today} actions={actions} onReorder={(ids) => reorder.mutate(ids)} />
+        <SortableGrid projects={shown} ownerName={ownerName} today={today} actions={actions} onReorder={reorderMutate} />
       ) : (
         <CardGrid>
           {shown.map((p, i) => (
@@ -383,7 +398,8 @@ function SortableCard(props: Omit<React.ComponentProps<typeof ProjectCard>, "dra
   );
 }
 
-function SortableGrid({
+/** Memoised: with stable props it skips re-rendering (and every useSortable) when only the panel opens or closes. */
+const SortableGrid = memo(function SortableGrid({
   projects,
   ownerName,
   today,
@@ -431,4 +447,4 @@ function SortableGrid({
       </SortableContext>
     </DndContext>
   );
-}
+});

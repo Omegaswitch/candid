@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, FolderKanban, ListChecks, RotateCcw } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +25,9 @@ export function TrashList() {
     },
     onError: (e) => toast.error(e.message),
   });
-  const daysLeft = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86_400_000));
+  // Read once per mount: a render must not call the clock (the countdown is in whole days anyway).
+  const [now] = useState(Date.now);
+  const daysLeft = (iso: string) => Math.max(0, Math.ceil((Date.parse(iso) - now) / 86_400_000));
 
   return (
     <div className="mx-auto flex max-w-[900px] flex-col gap-5">

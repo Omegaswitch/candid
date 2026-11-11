@@ -18,7 +18,12 @@ const s = t.documents;
 export default function PreviewDialog({ doc, docs, onClose }: { doc: DocumentDto | null; docs?: DocumentDto[]; onClose: () => void }) {
   const files = (docs ?? (doc ? [doc] : [])).filter((d) => d.kind === "file");
   const [current, setCurrent] = useState(doc);
-  useEffect(() => setCurrent(doc), [doc]);
+  // A new `doc` from the parent resets the shown one (adjusted during render, not in an effect).
+  const [shownFor, setShownFor] = useState(doc);
+  if (doc !== shownFor) {
+    setShownFor(doc);
+    setCurrent(doc);
+  }
   const i = current ? files.findIndex((d) => d.id === current.id) : -1;
   const go = (d: -1 | 1) => files.length > 1 && setCurrent(files[(i + d + files.length) % files.length]);
 

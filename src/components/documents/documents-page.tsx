@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useHydrated } from "@/hooks/hydrated";
 import { useProjects } from "@/hooks/queries";
 import { fmt, t } from "@/i18n";
 import { formatInstant, formatRelative } from "@/lib/dates";
@@ -44,6 +45,9 @@ const NONE = "none";
 
 export function DocumentsPage() {
   const docs = useDocuments();
+  // Documents are never seeded by the server: show the skeleton until hydration is over (see useHydrated).
+  const hydrated = useHydrated();
+  const loading = docs.isPending || !hydrated;
   const upload = useUpload();
   const reorder = useReorderDocuments();
   const [preview, setPreview] = useState<DocumentDto | null>(null);
@@ -122,7 +126,7 @@ export function DocumentsPage() {
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-card">
-        {docs.isPending ? (
+        {loading ? (
           <div className="flex flex-col divide-y" aria-busy aria-label={t.common.loading}>
             <div className="flex h-10 items-center gap-4 pl-10 pr-2 text-sm text-muted-foreground">
               <span className="flex-1">{s.columns.name}</span>

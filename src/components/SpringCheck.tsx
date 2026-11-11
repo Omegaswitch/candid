@@ -86,7 +86,9 @@ const SpringCheck: React.FC<SpringCheckProps> = ({
   const wordRef = useRef<HTMLSpanElement>(null);
   const ruleRef = useRef<HTMLSpanElement>(null);
   const cfg = useRef({ doneOpacity, strikeLag });
-  cfg.current = { doneOpacity, strikeLag };
+  useLayoutEffect(() => {
+    cfg.current = { doneOpacity, strikeLag };
+  });
 
   const write = (value: number) => {
     const r = readings(value, cfg.current.doneOpacity, cfg.current.strikeLag);

@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
-import { rememberTimeZone } from "@/lib/dates";
+import { rememberTimeZone } from "@/lib/timezone";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(

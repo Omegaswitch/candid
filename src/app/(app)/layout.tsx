@@ -15,7 +15,7 @@ import { getPrefs } from "@/server/preferences";
 import { listLabels } from "@/server/labels";
 import { listProjectSummaries } from "@/server/projects";
 import { taskCounts } from "@/server/tasks";
-import { viewerToday } from "@/lib/dates";
+import { viewerToday } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (counts) qc.setQueryData(qk.counts(), counts);
 
   return (
-    <SessionProvider value={{ membershipId: ctx.membershipId, role: ctx.role, name: ctx.name, email: ctx.email, workspaceName: ws?.name ?? "", authMode }}>
+    <SessionProvider value={{ membershipId: ctx.membershipId, role: ctx.role, name: ctx.name, email: ctx.email, workspaceName: ws?.name ?? "", authMode, seeded: !!today }}>
       <HydrationBoundary state={dehydrate(qc)}>
         <AppShell>{children}</AppShell>
       </HydrationBoundary>

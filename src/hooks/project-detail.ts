@@ -365,6 +365,8 @@ export function useAutosave(opts: {
   const [text, setTextState] = useState(() => readDraft(key) ?? serverText);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [conflict, setConflict] = useState<TextConflict | null>(null);
+  // Mirror of `r.current.base` for rendering ("unsaved" hint); the ref stays the source of truth.
+  const [savedBase, setSavedBase] = useState(serverText);
   const r = useRef({ text, base: serverText, version: serverVersion, saving: false, conflict: false, timer: 0 as unknown as ReturnType<typeof setTimeout> | 0 });
   const optsRef = useRef(opts);
   useEffect(() => {
@@ -380,9 +382,11 @@ export function useAutosave(opts: {
     s.text = s.base = serverText;
     s.version = serverVersion;
     setTextState(serverText);
+    setSavedBase(serverText);
   }, [serverText, serverVersion]);
 
-  const doSave = useCallback(async (): Promise<void> => {
+  // Named so the retries below can call it without reading the hook's own binding before it exists.
+  const doSave = useCallback(async function save(): Promise<void> {
     const s = r.current;
     if (s.timer) clearTimeout(s.timer);
     s.timer = 0;
@@ -394,6 +398,7 @@ export function useAutosave(opts: {
       const out = await optsRef.current.save(sending, s.version);
       s.base = sending;
       s.version = out.version;
+      setSavedBase(sending);
     } catch (e) {
       s.saving = false;
       if (!(e instanceof ApiError && e.isConflict)) {
@@ -404,8 +409,11 @@ export function useAutosave(opts: {
       if (cur.text === s.base || cur.text === sending) {
         // Only the version moved (another field changed), or they saved the same text: no real conflict.
         s.version = cur.version;
-        if (cur.text === sending) s.base = sending;
-        return doSave();
+        if (cur.text === sending) {
+          s.base = sending;
+          setSavedBase(sending);
+        }
+        return save();
       }
       s.conflict = true;
       setStatus("idle");
@@ -415,7 +423,7 @@ export function useAutosave(opts: {
     s.saving = false;
     clearDraft(optsRef.current.key);
     setStatus("saved");
-    if (dirty()) return doSave(); // typed while the request was out
+    if (dirty()) return save(); // typed while the request was out
   }, []);
 
   const setText = (v: string) => {
@@ -434,6 +442,7 @@ export function useAutosave(opts: {
     setConflict(null);
     s.version = c.theirsVersion;
     s.base = c.theirs;
+    setSavedBase(c.theirs);
     // Anything typed while the dialog was open is part of "mine".
     const next = choice === "theirs" ? c.theirs : choice === "mine" ? s.text : `${c.theirs}\n\n————————\n\n${s.text}`;
     s.text = next;
@@ -466,5 +475,5 @@ export function useAutosave(opts: {
     };
   }, [doSave]);
 
-  return { text, setText, flush: doSave, retry: doSave, status, conflict, resolve, dirty: text !== r.current.base };
+  return { text, setText, flush: doSave, retry: doSave, status, conflict, resolve, dirty: text !== savedBase };
 }
