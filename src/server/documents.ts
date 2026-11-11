@@ -7,7 +7,7 @@ import { FILE_TYPES, MAX_UPLOAD_BYTES, PREVIEWABLE, extensionOf, fileTypeOfMime,
 import { logActivity } from "./activity";
 import type { Ctx } from "./context";
 import { AppError, conflict, notFound } from "./errors";
-import { loadProject } from "./projects";
+import { loadProject, positionArrays } from "./projects";
 import { extractPdfText, isPdf } from "./pdf-text";
 import { newIncomingKey, newStorageKey, storage, type PresignedUpload } from "./storage";
 
@@ -377,9 +377,10 @@ export async function reorderDocuments(ctx: Ctx, orderedIds: string[]) {
       .from(documents)
       .where(and(eq(documents.workspaceId, ctx.workspaceId), inArray(documents.id, orderedIds)));
     if (owned.length !== new Set(orderedIds).size) throw notFound("Document");
-    for (const [i, id] of orderedIds.entries()) {
-      await tx.update(documents).set({ position: i }).where(and(eq(documents.id, id), eq(documents.workspaceId, ctx.workspaceId)));
-    }
+    const { ids, positions } = positionArrays(orderedIds);
+    await tx.execute(sql`update ${documents} set position = v.pos
+      from unnest(${ids}::uuid[], ${positions}::float8[]) as v(id, pos)
+      where ${documents.id} = v.id and ${documents.workspaceId} = ${ctx.workspaceId}`);
   });
 }
 

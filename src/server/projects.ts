@@ -140,23 +140,28 @@ async function loadProject(ctx: Ctx, id: string, tx: Tx | typeof db = db) {
   return p;
 }
 
+/** Two parallel queries: the project row (with pinned and label ids as subqueries) and its tasks. */
 export async function getProject(ctx: Ctx, id: string) {
-  const p = await loadProject(ctx, id);
-  const list = await db
-    .select()
-    .from(tasks)
-    .where(and(eq(tasks.projectId, id), eq(tasks.workspaceId, ctx.workspaceId), isNull(tasks.deletedAt)))
-    .orderBy(asc(tasks.position), asc(tasks.createdAt));
-  const [fav] = await db
-    .select({ id: favorites.id })
-    .from(favorites)
-    .where(and(eq(favorites.membershipId, ctx.membershipId), eq(favorites.kind, "project"), eq(favorites.entityId, id)));
-  const labelRows = await db
-    .select({ id: projectLabels.labelId })
-    .from(projectLabels)
-    .innerJoin(labels, eq(labels.id, projectLabels.labelId))
-    .where(and(eq(projectLabels.projectId, id), eq(labels.workspaceId, ctx.workspaceId)));
-  return { project: p, tasks: list, pinned: !!fav, labelIds: labelRows.map((r) => r.id) };
+  const [[row], list] = await Promise.all([
+    db
+      .select({
+        p: projects,
+        // `id` is the bound parameter, never a bare column, so nothing inside the subqueries can capture it.
+        pinned: sql<boolean>`exists (select 1 from ${favorites} f where f.membership_id = ${ctx.membershipId}
+          and f.kind = 'project' and f.entity_id = ${id})`,
+        labelIds: sql<string[]>`coalesce((select json_agg(pl.label_id) from ${projectLabels} pl
+          join ${labels} l on l.id = pl.label_id where pl.project_id = ${id} and l.workspace_id = ${ctx.workspaceId}), '[]'::json)`,
+      })
+      .from(projects)
+      .where(and(eq(projects.id, id), eq(projects.workspaceId, ctx.workspaceId), isNull(projects.deletedAt))),
+    db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.projectId, id), eq(tasks.workspaceId, ctx.workspaceId), isNull(tasks.deletedAt)))
+      .orderBy(asc(tasks.position), asc(tasks.createdAt)),
+  ]);
+  if (!row) throw notFound("Project");
+  return { project: row.p, tasks: list, pinned: row.pinned, labelIds: row.labelIds };
 }
 
 export async function createProject(
@@ -316,10 +321,20 @@ export async function reorderProjects(ctx: Ctx, orderedIds: string[]) {
       .from(projects)
       .where(and(eq(projects.workspaceId, ctx.workspaceId), inArray(projects.id, orderedIds)));
     if (owned.length !== new Set(orderedIds).size) throw notFound("Project");
-    for (const [i, pid] of orderedIds.entries()) {
-      await tx.update(projects).set({ position: i }).where(and(eq(projects.id, pid), eq(projects.workspaceId, ctx.workspaceId)));
-    }
+    const { ids, positions } = positionArrays(orderedIds);
+    await tx.execute(sql`update ${projects} set position = v.pos
+      from unnest(${ids}::uuid[], ${positions}::float8[]) as v(id, pos)
+      where ${projects.id} = v.id and ${projects.workspaceId} = ${ctx.workspaceId}`);
   });
+}
+
+/**
+ * One UPDATE for a whole reorder instead of one per row: the new positions travel as two array
+ * literals (the ids are validated uuids). A repeated id keeps its last index, as row-by-row did.
+ */
+export function positionArrays(orderedIds: string[]) {
+  const pos = new Map(orderedIds.map((id, i) => [id, i]));
+  return { ids: `{${[...pos.keys()].join(",")}}`, positions: `{${[...pos.values()].join(",")}}` };
 }
 
 /** Called after any task change so "recent activity" sorting and `updatedAt` stay true. */

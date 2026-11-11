@@ -18,18 +18,21 @@ export type ActivityItem = {
 
 /** Latest events for one project, newest first, with the actor's display name. */
 export async function listProjectActivity(ctx: Ctx, projectId: string, limit = 30): Promise<ActivityItem[]> {
-  await loadProject(ctx, projectId);
-  const rows = await db
-    .select({
-      e: activityEvents,
-      displayName: memberships.displayName,
-      email: memberships.email,
-    })
-    .from(activityEvents)
-    .leftJoin(memberships, and(eq(memberships.id, activityEvents.actorId), eq(memberships.workspaceId, ctx.workspaceId)))
-    .where(and(eq(activityEvents.workspaceId, ctx.workspaceId), eq(activityEvents.projectId, projectId)))
-    .orderBy(desc(activityEvents.createdAt), desc(activityEvents.id))
-    .limit(limit);
+  // The events query is scoped to the workspace on its own, so the existence check runs alongside it.
+  const [, rows] = await Promise.all([
+    loadProject(ctx, projectId),
+    db
+      .select({
+        e: activityEvents,
+        displayName: memberships.displayName,
+        email: memberships.email,
+      })
+      .from(activityEvents)
+      .leftJoin(memberships, and(eq(memberships.id, activityEvents.actorId), eq(memberships.workspaceId, ctx.workspaceId)))
+      .where(and(eq(activityEvents.workspaceId, ctx.workspaceId), eq(activityEvents.projectId, projectId)))
+      .orderBy(desc(activityEvents.createdAt), desc(activityEvents.id))
+      .limit(limit),
+  ]);
   return rows.map(({ e, displayName, email }) => ({
     id: e.id,
     action: e.action,

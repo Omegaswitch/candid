@@ -181,6 +181,7 @@ function TaskDetails({ projectId, task, onPatch }: { projectId: string; task: Ta
 export function TaskRow({
   projectId,
   task,
+  number,
   selecting,
   selected,
   onSelect,
@@ -193,6 +194,8 @@ export function TaskRow({
 }: {
   projectId: string;
   task: Task;
+  /** Position among the open steps (1, 2, 3 …); none for completed steps. */
+  number?: number;
   selecting: boolean;
   selected: boolean;
   onSelect: (on: boolean) => void;
@@ -254,6 +257,11 @@ export function TaskRow({
             </ClickSpark>
           )}
         </span>
+        {number !== undefined && (
+          <span aria-hidden className="num -mr-0.5 min-w-5 flex-none py-1 text-right text-xs leading-5 text-muted-foreground/80">
+            {number}.
+          </span>
+        )}
         <div className="grid min-w-0 flex-1 gap-0.5 py-1">
           <InlineText
             value={task.title}

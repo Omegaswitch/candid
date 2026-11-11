@@ -7,7 +7,7 @@ import { logActivity } from "./activity";
 import type { Ctx } from "./context";
 import { conflict, notFound } from "./errors";
 import { assertMembers } from "./members";
-import { isoDate, loadProject, touchProject } from "./projects";
+import { isoDate, loadProject, positionArrays, touchProject } from "./projects";
 
 export const taskInput = z.object({
   title: z.string().trim().min(1).max(500),
@@ -29,6 +29,13 @@ export const taskPatch = z.object({
   version: z.int(),
 });
 
+/** Promise.all for independent checks; when several fail, the first in argument order wins, as sequential awaits did. */
+async function inOrder<T extends readonly unknown[]>(promises: readonly [...{ [K in keyof T]: Promise<T[K]> }]): Promise<T> {
+  const settled = await Promise.allSettled(promises);
+  for (const r of settled) if (r.status === "rejected") throw r.reason;
+  return settled.map((r) => (r as PromiseFulfilledResult<unknown>).value) as unknown as T;
+}
+
 async function loadTask(ctx: Ctx, id: string) {
   const [t] = await db
     .select()
@@ -40,18 +47,23 @@ async function loadTask(ctx: Ctx, id: string) {
 
 export async function createTask(ctx: Ctx, projectId: string, raw: z.input<typeof taskInput>) {
   const input = taskInput.parse(raw);
-  await loadProject(ctx, projectId);
-  await assertMembers(ctx, [input.assigneeId]);
-  const [{ max }] = await db
-    .select({ max: sql<number>`coalesce(max(${tasks.position}), -1)` })
-    .from(tasks)
-    .where(eq(tasks.projectId, projectId));
+  // Independent reads in one round trip; the insert waits for all of them.
+  const [, , [{ max }]] = await inOrder([
+    loadProject(ctx, projectId),
+    assertMembers(ctx, [input.assigneeId]),
+    db
+      .select({ max: sql<number>`coalesce(max(${tasks.position}), -1)` })
+      .from(tasks)
+      .where(eq(tasks.projectId, projectId)),
+  ]);
   const [t] = await db
     .insert(tasks)
     .values({ ...input, assigneeId: input.assigneeId ?? null, workspaceId: ctx.workspaceId, projectId, position: max + 1 })
     .returning();
-  await touchProject(ctx, projectId);
-  await logActivity(ctx, { projectId, entityType: "task", entityId: t.id, action: "created", data: { title: t.title } });
+  await Promise.all([
+    touchProject(ctx, projectId),
+    logActivity(ctx, { projectId, entityType: "task", entityId: t.id, action: "created", data: { title: t.title } }),
+  ]);
   return t;
 }
 
@@ -60,8 +72,7 @@ const doneFields = (ctx: Ctx, done: boolean) =>
 
 export async function updateTask(ctx: Ctx, id: string, raw: z.input<typeof taskPatch>) {
   const { version, done, ...patch } = taskPatch.parse(raw);
-  await assertMembers(ctx, [patch.assigneeId]);
-  const before = await loadTask(ctx, id);
+  const [, before] = await inOrder([assertMembers(ctx, [patch.assigneeId]), loadTask(ctx, id)]);
   const [t] = await db
     .update(tasks)
     .set({
@@ -73,12 +84,14 @@ export async function updateTask(ctx: Ctx, id: string, raw: z.input<typeof taskP
     .where(and(eq(tasks.id, id), eq(tasks.workspaceId, ctx.workspaceId), eq(tasks.version, version), isNull(tasks.deletedAt)))
     .returning();
   if (!t) throw conflict(await loadTask(ctx, id));
-  await touchProject(ctx, t.projectId);
-  if (done !== undefined && done !== before.done) {
-    await logActivity(ctx, { projectId: t.projectId, entityType: "task", entityId: id, action: done ? "completed" : "reopened", data: { title: t.title } });
-  } else if (patch.title && patch.title !== before.title) {
-    await logActivity(ctx, { projectId: t.projectId, entityType: "task", entityId: id, action: "renamed", data: { from: before.title, to: t.title } });
-  }
+  await Promise.all([
+    touchProject(ctx, t.projectId),
+    done !== undefined && done !== before.done
+      ? logActivity(ctx, { projectId: t.projectId, entityType: "task", entityId: id, action: done ? "completed" : "reopened", data: { title: t.title } })
+      : patch.title && patch.title !== before.title
+        ? logActivity(ctx, { projectId: t.projectId, entityType: "task", entityId: id, action: "renamed", data: { from: before.title, to: t.title } })
+        : undefined,
+  ]);
   return t;
 }
 
@@ -90,8 +103,10 @@ export async function setTaskRemoved(ctx: Ctx, id: string, removed: boolean) {
     .where(and(eq(tasks.id, id), eq(tasks.workspaceId, ctx.workspaceId)))
     .returning();
   if (!t) throw notFound("Task");
-  await touchProject(ctx, t.projectId);
-  await logActivity(ctx, { projectId: t.projectId, entityType: "task", entityId: id, action: removed ? "removed" : "restored", data: { title: t.title } });
+  await Promise.all([
+    touchProject(ctx, t.projectId),
+    logActivity(ctx, { projectId: t.projectId, entityType: "task", entityId: id, action: removed ? "removed" : "restored", data: { title: t.title } }),
+  ]);
   return t;
 }
 
@@ -103,9 +118,10 @@ export async function reorderTasks(ctx: Ctx, projectId: string, orderedIds: stri
       .from(tasks)
       .where(and(eq(tasks.projectId, projectId), eq(tasks.workspaceId, ctx.workspaceId), inArray(tasks.id, orderedIds)));
     if (owned.length !== new Set(orderedIds).size) throw notFound("Task");
-    for (const [i, tid] of orderedIds.entries()) {
-      await tx.update(tasks).set({ position: i }).where(eq(tasks.id, tid));
-    }
+    const { ids, positions } = positionArrays(orderedIds);
+    await tx.execute(sql`update ${tasks} set position = v.pos
+      from unnest(${ids}::uuid[], ${positions}::float8[]) as v(id, pos)
+      where ${tasks.id} = v.id and ${tasks.projectId} = ${projectId}`);
   });
   await touchProject(ctx, projectId);
 }

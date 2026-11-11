@@ -369,6 +369,11 @@ export function Checklist({
     }
   };
 
+  /** Open steps numbered 1, 2, 3 … in the order shown: section by section when grouped by person. */
+  const stepNumber = new Map(
+    (byPerson ? sectionKeys.flatMap((key) => open.filter((x) => keyOf(x) === key)) : open).map((x, i) => [x.id, i + 1]),
+  );
+
   const rows = (group: Task[]) => (
     <ul className="grid gap-px">
       {group.map((task, i) => (
@@ -376,6 +381,7 @@ export function Checklist({
           key={task.id}
           projectId={projectId}
           task={task}
+          number={stepNumber.get(task.id)}
           selecting={selecting}
           selected={selected.has(task.id)}
           onSelect={(on) =>
