@@ -171,7 +171,7 @@ export function ProjectToolbar({
   const clear = () => onFilters(NO_FILTERS);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
       {/* Desktop and tablet: the filters read left to right. */}
       <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-2 md:flex">
         <MineToggle filters={filters} onChange={onFilters} />
@@ -184,7 +184,7 @@ export function ProjectToolbar({
         )}
       </div>
       {/* Phone: one button opens the filters in a sheet. */}
-      <div className="flex min-w-0 flex-1 gap-2 md:hidden">
+      <div className="flex flex-1 gap-2 md:hidden">
         <Button variant="outline" className="h-9 bg-card" onClick={() => setSheet(true)} aria-haspopup="dialog">
           <ListFilter /> <span className="sr-only min-[400px]:not-sr-only">{f.label}</span>
           {inSheet > 0 && <span className="num rounded-full bg-foreground px-1.5 text-xs text-background">{inSheet}</span>}
