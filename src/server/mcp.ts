@@ -165,7 +165,7 @@ export function buildMcpServer(ctx: Ctx) {
   server.registerTool(
     "analytics_summary",
     {
-      description: "Workspace numbers: projects by status, overdue tasks, on-time rate, weekly completions, top clients, busiest projects.",
+      description: "Workspace numbers: projects by status, overdue tasks, on-time rate, weekly completions, top clients, busiest members.",
       inputSchema: { today },
       annotations: { readOnlyHint: true },
     },
@@ -271,7 +271,7 @@ export function buildMcpServer(ctx: Ctx) {
       let l: Label | undefined = all.find((x) => x.id === label || x.name.toLowerCase() === label.trim().toLowerCase());
       if (!l && add && create) l = await createLabel(ctx, { name: label });
       if (!l) throw new AppError("not_found", `No label "${label}". Existing: ${all.map((x) => x.name).join(", ") || "none"}`);
-      const next = add ? [...labelIds, l.id] : labelIds.filter((x) => x !== l.id);
+      const next = add ? [...new Set([...labelIds, l.id])] : labelIds.filter((x) => x !== l.id);
       if (next.length !== labelIds.length) await setProjectLabels(ctx, projectId, next);
       return { projectId, labels: all.concat(all.some((x) => x.id === l.id) ? [] : [l]).filter((x) => next.includes(x.id)).map((x) => x.name) };
     });

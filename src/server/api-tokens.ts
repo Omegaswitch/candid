@@ -86,12 +86,12 @@ export async function ctxFromToken(token: string | null | undefined): Promise<(C
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 120;
 const hits = new Map<string, { start: number; n: number }>();
-export function rateLimited(key: string, now = Date.now()) {
+export function rateLimited(key: string, now = Date.now(), max = MAX_PER_WINDOW) {
   const h = hits.get(key);
   if (!h || now - h.start > WINDOW_MS) {
     if (hits.size > 10_000) hits.clear();
     hits.set(key, { start: now, n: 1 });
     return false;
   }
-  return ++h.n > MAX_PER_WINDOW;
+  return ++h.n > max;
 }

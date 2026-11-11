@@ -108,7 +108,7 @@ export function useSetProjectStatus() {
       api(`/api/projects/${p.id}`, { method: "PATCH", json: { status, priority: p.priority, version: p.version } }),
     onMutate: async ({ p, status }) => {
       await qc.cancelQueries({ queryKey: qk.projects() });
-      const prev = setActive(qc, (list) => list.map((x) => (x.id === p.id ? { ...x, status } : x)));
+      const prev = setActive(qc, (list) => list.map((x) => (x.id === p.id ? { ...x, status, version: x.version + 1 } : x)));
       return { prev };
     },
     onError: (e, { p }, c) => {

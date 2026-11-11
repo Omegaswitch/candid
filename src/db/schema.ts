@@ -314,6 +314,70 @@ export const apiTokens = pgTable(
   (t) => [uniqueIndex("api_tokens_hash_uq").on(t.tokenHash), index("api_tokens_member_idx").on(t.membershipId)],
 );
 
+// OAuth 2.1 for MCP connectors (Claude, ChatGPT). Clients register themselves (RFC 7591, public
+// clients only); a grant is one member's consent for one client. Codes and tokens are stored as sha256.
+export const oauthClients = pgTable("oauth_clients", {
+  id: uuid("id").primaryKey().defaultRandom(), // the client_id
+  name: text("name").notNull(),
+  redirectUris: text("redirect_uris").array().notNull(),
+  createdAt: created(),
+});
+
+export const oauthGrants = pgTable(
+  "oauth_grants",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    membershipId: uuid("membership_id").notNull().references(() => memberships.id, { onDelete: "cascade" }),
+    clientId: uuid("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+    scope: text("scope").notNull(),
+    resource: text("resource").notNull(),
+    refreshHash: text("refresh_hash").notNull(),
+    /** The refresh token this one replaced, to detect replay of a rotated token. */
+    prevRefreshHash: text("prev_refresh_hash"),
+    refreshExpiresAt: ts("refresh_expires_at").notNull(),
+    rotatedAt: ts("rotated_at"),
+    createdAt: created(),
+    lastUsedAt: ts("last_used_at"),
+    revokedAt: ts("revoked_at"),
+  },
+  (t) => [
+    uniqueIndex("oauth_grants_refresh_uq").on(t.refreshHash),
+    index("oauth_grants_prev_refresh_idx").on(t.prevRefreshHash),
+    index("oauth_grants_member_idx").on(t.membershipId),
+  ],
+);
+
+export const oauthCodes = pgTable(
+  "oauth_codes",
+  {
+    codeHash: text("code_hash").primaryKey(),
+    clientId: uuid("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    membershipId: uuid("membership_id").notNull().references(() => memberships.id, { onDelete: "cascade" }),
+    redirectUri: text("redirect_uri").notNull(),
+    codeChallenge: text("code_challenge").notNull(),
+    scope: text("scope").notNull(),
+    resource: text("resource").notNull(),
+    expiresAt: ts("expires_at").notNull(),
+    usedAt: ts("used_at"),
+    /** Set once exchanged, so a replayed code can revoke what it issued. */
+    grantId: uuid("grant_id").references(() => oauthGrants.id, { onDelete: "cascade" }),
+    createdAt: created(),
+  },
+);
+
+export const oauthAccessTokens = pgTable(
+  "oauth_access_tokens",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    grantId: uuid("grant_id").notNull().references(() => oauthGrants.id, { onDelete: "cascade" }),
+    expiresAt: ts("expires_at").notNull(),
+    createdAt: created(),
+  },
+  (t) => [index("oauth_access_tokens_grant_idx").on(t.grantId)],
+);
+
 export type ApiToken = typeof apiTokens.$inferSelect;
 export type Workspace = typeof workspaces.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;

@@ -19,6 +19,7 @@ import Counter from "@/components/Counter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCounts, useMembers, usePrefs, useProjects, useSavePrefs } from "@/hooks/queries";
+import { useLabels } from "@/hooks/labels";
 import { useReorderProjects, useSetArchived, useSetPinned } from "@/hooks/projects";
 import { fmt, plural, t } from "@/i18n";
 import { addDaysIso, todayLocal } from "@/lib/dates";
@@ -84,6 +85,9 @@ export function Dashboard() {
   const ownerName = useCallback((id: string | null) => (id ? (memberName.get(id) ?? null) : null), [memberName]);
 
   const all = projects.data;
+  const labels = useLabels();
+  // A deleted label left in saved filters must not hide every project.
+  const labelExists = !labels.data || labels.data.some((l) => l.id === filters.labelId);
   const shown = useMemo(() => {
     if (!all) return [];
     const list = all.filter(
@@ -91,11 +95,11 @@ export function Dashboard() {
         (!filters.ownerId || p.ownerId === filters.ownerId) &&
         (!filters.status || p.status === filters.status) &&
         (!filters.priority || p.priority === filters.priority) &&
-        (!filters.labelId || p.labels.some((l) => l.id === filters.labelId)) &&
+        (!filters.labelId || !labelExists || p.labels.some((l) => l.id === filters.labelId)) &&
         matchesDue(p, filters.due, today),
     );
     return list.sort(SORTS[sort]);
-  }, [all, filters, sort, today]);
+  }, [all, filters, sort, today, labelExists]);
 
   const finding = useMemo(() => {
     if (!all) return null;
