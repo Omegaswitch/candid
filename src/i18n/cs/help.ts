@@ -46,6 +46,7 @@ export const help: Localized<typeof en> = {
         "Na název kroku klikněte pro přejmenování (Enter uloží, Esc zruší). Nový krok napíšete do pole pod seznamem.",
         "Nabídka ⋯ u kroku: posunout nahoru či dolů, odebrat. Kroky lze i přetáhnout za úchyt.",
         "U kroku můžete nastavit, kdo ho má na starosti, termín, poznámku a označení „Čeká se“ s důvodem.",
+        "Přepínač „Rozdělit podle lidí“ rozdělí kroky do oddílů podle řešitele, každý s počtem hotových kroků. Přetažením kroku do jiného oddílu ho přiřadíte někomu jinému.",
         "Režim výběru umožní hromadně dokončit kroky, přiřadit je nebo změnit termín.",
         "Když jsou všechny kroky hotové, Candid nabídne označit projekt jako dokončený.",
       ],

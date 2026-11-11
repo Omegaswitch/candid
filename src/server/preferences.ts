@@ -20,6 +20,7 @@ export const prefsSchema = z.object({
     .default({ ownerId: null, status: null, priority: null, due: null, labelId: null }),
   sidebarCollapsed: z.boolean().default(false),
   completedCollapsed: z.boolean().default(true),
+  checklistByPerson: z.boolean().default(false),
 });
 export type Prefs = z.infer<typeof prefsSchema>;
 

@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
+import { ApiTokensSettings } from "./api-tokens-settings";
 import { Field, PageTitle, SettingsSection } from "./settings-section";
 
 const g = t.google;
@@ -100,6 +101,7 @@ export function IntegrationsSettings({ connected, callbackError }: { connected: 
           </div>
         )}
       </SettingsSection>
+      <ApiTokensSettings />
     </>
   );
 }
