@@ -39,6 +39,8 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
 
   filters: {
     label: "Filtry",
+    mine: "Moje",
+    mineHint: "Projekty, které vlastním nebo kde mám otevřené kroky",
     owner: "Vlastník",
     status: "Stav",
     due: "Termín",
@@ -90,7 +92,6 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
   },
   reorderHint: "Karty přesuňte přetažením, nebo použijte Posunout nahoru a\u00a0Posunout dolů v\u00a0nabídce karty.",
   reorderOff: "Ruční řazení funguje jen s\u00a0vlastním pořadím a\u00a0bez filtrů.",
-  reordered: "Pořadí uloženo",
   couldNotReorder: "Nové pořadí se nepodařilo uložit",
   dragHandle: "Přesunout {name}",
   dragStart: "Vybráno k\u00a0přesunu: {name}. Šipkami přesuňte, mezerníkem položte, klávesou Escape akci zrušíte.",
@@ -114,6 +115,7 @@ export const projects: Localized<typeof import("../en/projects").projects> = {
     archive: "Archivovat",
     moveUp: "Posunout nahoru",
     moveDown: "Posunout dolů",
+    moveTo: "Přesunout do",
   },
   pinned: "Připnuto",
   unpinned: "Odepnuto",

@@ -2,9 +2,9 @@
 import { getDocumentProxy } from "unpdf";
 
 /** Stored text is capped so one huge PDF cannot bloat the row or slow every search scan. */
-export const MAX_PDF_TEXT_CHARS = 200_000;
+const MAX_PDF_TEXT_CHARS = 200_000;
 /** Extraction runs inside the upload request; give up rather than hold it open. */
-export const PDF_EXTRACT_TIMEOUT_MS = 20_000;
+const PDF_EXTRACT_TIMEOUT_MS = 20_000;
 
 /** Collapses all whitespace (incl. NBSP and line breaks) to single spaces and trims. */
 export function normalizeText(s: string) {

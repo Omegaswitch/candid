@@ -4,7 +4,7 @@ import type { Cell, ParsedSheet, ParsedWorkbook } from "./types";
 // Every source ends up as ParsedWorkbook: sheets of rows of evaluated values. Nothing here ever
 // evaluates a formula or runs a macro.
 
-export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 export class ParseError extends Error {
   constructor(public code: "macro" | "unsupported" | "tooLarge" | "unreadable" | "empty") {
@@ -41,7 +41,7 @@ export function decodeText(bytes: Uint8Array): string {
 const stripBom = (s: string) => (s.charCodeAt(0) === 0xfeff ? s.slice(1) : s);
 
 /** , ; or tab: the one that splits the first lines into the same number (> 1) of columns. */
-export function detectDelimiter(text: string): string {
+function detectDelimiter(text: string): string {
   let best = ",";
   let bestScore = 0;
   for (const d of [",", ";", "\t"]) {

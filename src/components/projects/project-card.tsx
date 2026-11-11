@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Archive, Copy, GripVertical, MoreHorizontal, PanelRightOpen, Pin, PinOff } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Archive, Copy, GripVertical, MoreHorizontal, PanelRightOpen, Pin, PinOff } from "lucide-react";
 import { memo, type CSSProperties, type HTMLAttributes, type MouseEvent, type Ref } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { fmt, t } from "@/i18n";
@@ -38,11 +41,14 @@ export function ProjectMenu({
   actions,
   index,
   count,
+  onStatus,
 }: {
   p: ProjectSummary;
   actions: CardActions;
   index: number;
   count: number;
+  /** Pipeline: "Move to → status", the touch-friendly alternative to dragging a card. */
+  onStatus?: (status: ProjectSummary["status"]) => void;
 }) {
   return (
     <DropdownMenu>
@@ -61,6 +67,20 @@ export function ProjectMenu({
         <DropdownMenuItem onSelect={() => actions.duplicate(p)}>
           <Copy /> {t.projects.menu.duplicate}
         </DropdownMenuItem>
+        {onStatus && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <ArrowRight /> {t.projects.menu.moveTo}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-40">
+              {(["active", "waiting", "completed"] as const).map((s) => (
+                <DropdownMenuItem key={s} disabled={p.status === s} onSelect={() => onStatus(s)}>
+                  {t.projects.status[s]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         {actions.move && (
           <>
             <DropdownMenuSeparator />

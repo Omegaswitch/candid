@@ -79,3 +79,19 @@ describe("permanent delete", () => {
     expect(tasks.map((x) => x.title)).toEqual(["Candidate outreach", "Write email", "Invoicing", "Presentation"]);
   });
 });
+
+describe("duplicateProject", () => {
+  it("copies labels and the client contact", async () => {
+    const { duplicateProject } = await import("./projects");
+    const { createLabel, setProjectLabels } = await import("./labels");
+    const ctx = await makeCtx();
+    const p = await createProject(ctx, { name: "Src", tasks: [{ title: "a" }] });
+    await updateProject(ctx, p.id, { contactName: "Jana", contactEmail: "jana@example.com", contactPhone: "+420 123", version: p.version });
+    const l = await createLabel(ctx, { name: "IT" });
+    await setProjectLabels(ctx, p.id, [l.id]);
+    const copy = await duplicateProject(ctx, p.id, { includeNotes: false, includeDates: false });
+    const got = await getProject(ctx, copy.id);
+    expect(got.labelIds).toEqual([l.id]);
+    expect(got.project).toMatchObject({ contactName: "Jana", contactEmail: "jana@example.com", contactPhone: "+420 123" });
+  });
+});

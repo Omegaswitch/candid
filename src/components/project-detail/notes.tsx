@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type Autosave = ReturnType<typeof useAutosave>;
 
-export function ConflictDialog({
+function ConflictDialog({
   conflict,
   open,
   onOpenChange,

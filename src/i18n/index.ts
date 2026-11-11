@@ -27,9 +27,9 @@ export const en = { common, nav, projects, tasks, documents, importExport, googl
 export type Strings = typeof en;
 
 export type Locale = "en" | "cs";
-export const LOCALE_COOKIE = "candid_locale";
+const LOCALE_COOKIE = "candid_locale";
 // Czech is the default; English only when someone picks it in the language switch.
-export const parseLocale = (v: string | null | undefined): Locale => (v === "en" ? "en" : "cs");
+const parseLocale = (v: string | null | undefined): Locale => (v === "en" ? "en" : "cs");
 
 const dictionaries: { en: Strings; cs: Localized<Strings> } = { en, cs };
 

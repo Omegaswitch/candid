@@ -8,12 +8,12 @@ const T1 = "22222222-2222-4222-8222-222222222222";
 const ANA = "33333333-3333-4333-8333-333333333333";
 
 const project = (o: Partial<SnapshotProject> = {}): SnapshotProject => ({
-  id: P1, name: "Website", client: "Acme", status: "active", priority: "normal", ownerId: null, dueDate: null, notes: "", version: 3, archived: false, ...o,
+  id: P1, name: "Website", client: "Acme", status: "active", priority: "normal", ownerId: null, dueDate: null, notes: "", contactName: null, contactEmail: null, contactPhone: null, labels: null, version: 3, archived: false, ...o,
 });
 const task = (o: Partial<SnapshotTask> = {}): SnapshotTask => ({
   id: T1, projectId: P1, title: "Wireframes", done: false, assigneeId: null, dueDate: null, note: "", version: 5, ...o,
 });
-const snap = (o: Partial<WorkspaceSnapshot> = {}): WorkspaceSnapshot => ({ projects: [], tasks: [], members: [{ id: ANA, email: "ana@example.com" }], ...o });
+const snap = (o: Partial<WorkspaceSnapshot> = {}): WorkspaceSnapshot => ({ projects: [], tasks: [], members: [{ id: ANA, email: "ana@example.com" }], labels: [], ...o });
 
 function plan(table: Cell[][], options: Partial<ImportOptions> = {}, s = snap()) {
   const [header, ...rows] = table as string[][];

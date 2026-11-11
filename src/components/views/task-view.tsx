@@ -156,7 +156,7 @@ export function TaskView({ view }: { view: TaskViewName }) {
   );
 }
 
-export function TaskRow({
+function TaskRow({
   it,
   today,
   assignee,

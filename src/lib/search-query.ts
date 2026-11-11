@@ -8,6 +8,8 @@
  *   typ:/type:projekt|úkol|dokument (project|task|document)   limit the result groups
  *   po termínu / overdue      only overdue (open, past due date) projects and tasks
  * Filter values may be quoted: klient:"Stavby Novák".
+ *   "přesná fráze"             a double-quoted phrase is one term: it must appear exactly as typed
+ *                              (case and accents ignored)
  */
 
 export type SearchType = "project" | "task" | "document";
@@ -22,7 +24,7 @@ export type ParsedQuery = {
   overdue: boolean;
 };
 
-export const MAX_TERMS = 6;
+const MAX_TERMS = 6;
 
 export const CS_FROM = "áäčďéěëíňóöřšťúůüýžÁÄČĎÉĚËÍŇÓÖŘŠŤÚŮÜÝŽ";
 export const CS_TO = "aacdeeeinoorstuuuyzAACDEEEINOORSTUUUYZ";
@@ -41,7 +43,7 @@ function foldChar(c: string) {
 }
 
 /** Length-preserving fold (per UTF-16 unit; surrogate pairs pass through unchanged). */
-export function fold(s: string) {
+function fold(s: string) {
   let out = "";
   for (let i = 0; i < s.length; i++) {
     const code = s.charCodeAt(i);
@@ -109,7 +111,11 @@ export function parseQuery(raw: string): ParsedQuery {
       }
       continue;
     }
-    const word = t[5] ?? t[6] ?? t[0];
+    if (t[5] !== undefined) {
+      pushTerm(out, t[5].replace(/\s+/g, " ").trim());
+      continue;
+    }
+    const word = t[6] ?? t[0];
     if (t[6] !== undefined && fold(word) === "overdue") {
       out.overdue = true;
       continue;
@@ -119,12 +125,13 @@ export function parseQuery(raw: string): ParsedQuery {
   return out;
 }
 
+function pushTerm(out: ParsedQuery, term: string) {
+  if (!term || out.terms.length >= MAX_TERMS) return;
+  if (!out.terms.some((x) => fold(x) === fold(term))) out.terms.push(term);
+}
+
 function pushTerms(out: ParsedQuery, text: string) {
-  for (const w of text.split(/\s+/)) {
-    const term = w.trim();
-    if (!term || out.terms.length >= MAX_TERMS) continue;
-    if (!out.terms.some((x) => fold(x) === fold(term))) out.terms.push(term);
-  }
+  for (const w of text.split(/\s+/)) pushTerm(out, w.trim());
 }
 
 export const hasCriteria = (q: ParsedQuery) => q.terms.length > 0 || !!q.client || !!q.label || q.overdue || q.types.length > 0;

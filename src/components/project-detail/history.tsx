@@ -12,7 +12,7 @@ import type { ActivityItem } from "@/server/activity-read";
 
 const a = t.tasks.activity;
 
-export function describeEvent(e: ActivityItem) {
+function describeEvent(e: ActivityItem) {
   const actor = e.actorName ?? a.someone;
   const d = (e.data ?? {}) as Record<string, unknown>;
   const vars = { actor, title: String(d.title ?? ""), from: String(d.from ?? ""), to: String(d.to ?? "") };

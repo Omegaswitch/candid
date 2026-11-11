@@ -16,8 +16,10 @@ export const prefsSchema = z.object({
       priority: z.enum(["normal", "high"]).nullable().default(null),
       due: z.enum(["overdue", "week", "month", "none"]).nullable().default(null),
       labelId: z.string().nullable().default(null),
+      /** "Mine": projects I own or where I have open steps. */
+      mine: z.boolean().default(false),
     })
-    .default({ ownerId: null, status: null, priority: null, due: null, labelId: null }),
+    .default({ ownerId: null, status: null, priority: null, due: null, labelId: null, mine: false }),
   sidebarCollapsed: z.boolean().default(false),
   completedCollapsed: z.boolean().default(true),
   checklistByPerson: z.boolean().default(false),

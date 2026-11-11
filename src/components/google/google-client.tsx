@@ -8,7 +8,7 @@ import { t } from "@/i18n";
 import { api, ApiError } from "@/lib/api";
 import type { GoogleStatus } from "@/server/google";
 
-export const googleStatusKey = ["google", "status"] as const;
+const googleStatusKey = ["google", "status"] as const;
 
 export function useGoogleStatus() {
   return useQuery({ queryKey: googleStatusKey, queryFn: () => api<GoogleStatus>("/api/google/status"), refetchInterval: false });
@@ -23,11 +23,11 @@ export function useDisconnectGoogle() {
 }
 
 /** True for the server's "token expired or revoked" error: show the Reconnect button. */
-export const isReconnectError = (e: unknown) =>
+const isReconnectError = (e: unknown) =>
   e instanceof ApiError && !!(e.details as { reconnect?: boolean } | undefined)?.reconnect;
 
 /** Same-tab navigation to Google; the callback returns the browser to `returnTo`. */
-export const connectHref = (returnTo: string) => `/api/google/connect?returnTo=${encodeURIComponent(returnTo)}`;
+const connectHref = (returnTo: string) => `/api/google/connect?returnTo=${encodeURIComponent(returnTo)}`;
 
 export function ConnectGoogleButton({ reconnect = false, returnTo, variant = "default" }: { reconnect?: boolean; returnTo?: string; variant?: "default" | "outline" }) {
   const pathname = usePathname();

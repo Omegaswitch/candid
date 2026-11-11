@@ -24,6 +24,5 @@ export const analytics = {
   busiest: "Busiest team members",
   busiestHint: "Open tasks assigned",
   noBusy: "No open tasks are assigned.",
-  openTasks: "open",
   overdueShort: "overdue",
 };

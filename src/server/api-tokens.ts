@@ -9,7 +9,7 @@ import { toCtx, type Ctx } from "./context";
 import { AppError, notFound } from "./errors";
 
 /** Personal access tokens for the MCP endpoint. Only the sha256 is stored; the token is shown once. */
-export const TOKEN_PREFIX = "cand_";
+const TOKEN_PREFIX = "cand_";
 export const tokenInput = z.object({ name: z.string().trim().min(1).max(100) });
 const MAX_TOKENS = 20;
 /** lastUsedAt is written at most this often per token. */

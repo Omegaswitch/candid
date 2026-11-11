@@ -9,7 +9,7 @@ import { AppError, notFound } from "./errors";
 import { loadProject, touchProject } from "./projects";
 
 /** Palette keys map to the pill colour tokens in globals.css; never raw CSS. */
-export const LABEL_COLORS = ["neutral", "hue", "positive", "warning", "negative"] as const;
+const LABEL_COLORS = ["neutral", "hue", "positive", "warning", "negative"] as const;
 export type LabelColor = (typeof LABEL_COLORS)[number];
 export type Label = { id: string; name: string; color: LabelColor };
 

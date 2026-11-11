@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, isNull, ne, sql, type SQL } from "drizzle-orm";
 import Papa from "papaparse";
 import { z } from "zod";
 import { db } from "@/db";
-import { memberships, projects, tasks } from "@/db/schema";
+import { labels, memberships, projectLabels, projects, tasks } from "@/db/schema";
 import { t } from "@/i18n";
 import { BOOLEAN_FALSE, BOOLEAN_TRUE } from "@/lib/import/booleans";
 import { escapeCell } from "@/lib/import/escape";
@@ -69,6 +69,17 @@ export async function buildExportBundle(ctx: Ctx, scope: ExportScope | unknown):
   const emails = new Map(people.map((m) => [m.id, m.email]));
   const email = (id: string | null) => (id ? txt(emails.get(id)) : null);
 
+  const labelRows = ps.length
+    ? await db
+        .select({ projectId: projectLabels.projectId, name: labels.name })
+        .from(projectLabels)
+        .innerJoin(labels, eq(labels.id, projectLabels.labelId))
+        .where(and(eq(labels.workspaceId, ctx.workspaceId), inArray(projectLabels.projectId, ps.map((p) => p.id))))
+        .orderBy(asc(labels.name))
+    : [];
+  const labelsOf = new Map<string, string[]>();
+  for (const r of labelRows) labelsOf.set(r.projectId, [...(labelsOf.get(r.projectId) ?? []), r.name]);
+
   const byProject = new Map<string, typeof ts>();
   for (const task of ts) {
     const list = byProject.get(task.projectId) ?? [];
@@ -92,6 +103,10 @@ export async function buildExportBundle(ctx: Ctx, scope: ExportScope | unknown):
       projectDueDate: p.dueDate,
       priority: p.priority,
       projectNote: txt(p.notes),
+      labels: txt((labelsOf.get(p.id) ?? []).join(", ")),
+      contactName: txt(p.contactName),
+      contactEmail: txt(p.contactEmail),
+      contactPhone: txt(p.contactPhone),
       task: null,
       completed: null,
       assigneeEmail: null,
@@ -149,7 +164,7 @@ export async function buildExportBundle(ctx: Ctx, scope: ExportScope | unknown):
   };
 }
 
-const PROJECT_FIELDS: ImportField[] = ["projectId", "project", "client", "projectStatus", "projectOwnerEmail", "projectDueDate", "priority", "projectNote"];
+const PROJECT_FIELDS: ImportField[] = ["projectId", "project", "client", "projectStatus", "projectOwnerEmail", "projectDueDate", "priority", "projectNote", "labels", "contactName", "contactEmail", "contactPhone"];
 const TASK_FIELDS: ImportField[] = ["projectId", "taskId", "project", "client", "task", "completed", "assigneeEmail", "taskDueDate", "taskNote"];
 
 // ------------------------------------------------------------------------------------- writers
@@ -186,7 +201,7 @@ export async function toXlsx(bundle: ExportBundle): Promise<Uint8Array> {
 }
 
 /** Import template: header + two example rows (Czech text, ISO dates) and an Instructions sheet. */
-export function templateTable(email = "jana.novakova@example.com"): ExportTable {
+function templateTable(email = "jana.novakova@example.com"): ExportTable {
   const example = (o: Partial<Record<ImportField, string>>) => IMPORT_FIELDS.map((f) => o[f] ?? null);
   const project = {
     project: "Rekonstrukce kanceláře Žižkov",
@@ -196,6 +211,10 @@ export function templateTable(email = "jana.novakova@example.com"): ExportTable 
     projectDueDate: "2026-12-15",
     priority: "high",
     projectNote: "Příliš žluťoučký kůň úpěl ďábelské ódy.",
+    labels: "Interiér, Rekonstrukce",
+    contactName: "Petr Novák",
+    contactEmail: "petr.novak@example.com",
+    contactPhone: "+420 777 123 456",
   };
   return {
     name: "Import",

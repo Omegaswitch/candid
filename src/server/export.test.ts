@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/db";
 import { projects, tasks } from "@/db/schema";
@@ -9,7 +9,8 @@ import { makeCtx } from "../../test/factory";
 import type { Ctx } from "./context";
 import { buildExportBundle, templateXlsx, toCsv, toXlsx } from "./export";
 import { commitImport, previewImport } from "./import";
-import { createProject, setArchived } from "./projects";
+import { createLabel, listLabels, setProjectLabels } from "./labels";
+import { createProject, getProject, setArchived, updateProject } from "./projects";
 
 const counts = async (ctx: Ctx) => ({
   projects: (await db.select().from(projects).where(eq(projects.workspaceId, ctx.workspaceId))).length,
@@ -39,7 +40,7 @@ describe("export", () => {
     expect(all.flat.rows).toHaveLength(3); // 2 tasks + 1 empty project
     expect(all.projects.rows.map((r) => r[0])).toEqual(expect.arrayContaining([a.id, empty.id]));
     expect(all.flat.rows.find((r) => r[0] === empty.id)?.[1]).toBeNull();
-    const row = all.flat.rows.find((r) => r[9] === "'+420 call")!;
+    const row = all.flat.rows.find((r) => r[13] === "'+420 call")!;
     expect(row[3]).toBe("'=HYPERLINK(\"x\")");
 
     expect((await buildExportBundle(ctx, { scope: "workspace", includeArchived: true })).projects.rows).toHaveLength(3);
@@ -93,5 +94,58 @@ describe("export", () => {
     expect(wb.sheets.map((s) => s.name)).toEqual(["Import", "Instructions"]);
     expect(wb.sheets[0].rows).toHaveLength(3);
     expect(wb.sheets[0].rows[1]).toContain("Rekonstrukce kanceláře Žižkov");
+  });
+
+  it("labels and contact round-trip: export, import into a fresh workspace creates labels, update mode is a no-op", async () => {
+    const { ctx, a } = await seed();
+    const l1 = await createLabel(ctx, { name: "Interiér", color: "hue" });
+    const l2 = await createLabel(ctx, { name: "Urgent" });
+    await setProjectLabels(ctx, a.id, [l1.id, l2.id]);
+    const cur = await getProject(ctx, a.id);
+    await updateProject(ctx, a.id, { contactName: "Jana Nováková", contactEmail: "jana@example.com", contactPhone: "+420 777 123 456", version: cur.project.version });
+
+    const bundle = await buildExportBundle(ctx, { scope: "workspace" });
+    expect(bundle.flat.header).toEqual(expect.arrayContaining(["Labels", "Contact name", "Contact email", "Contact phone"]));
+    const csv = toCsv(bundle.flat);
+
+    // Same workspace, update mode: nothing changes.
+    const req = reimport(parseCsv(csv, "export.csv"));
+    const plan = await previewImport(ctx, req);
+    expect(plan.counts).toMatchObject({ projectsUpdate: 0, errors: 0 });
+
+    // Fresh workspace, create mode: labels are created, contact copied.
+    const other = await makeCtx();
+    const fresh = reimport(parseCsv(csv, "export.csv"), "create");
+    fresh.rows = fresh.rows.map((r) => r.map((c, i) => (i < 2 ? null : c))); // IDs belong to the other workspace
+    const res = await commitImport(other, { ...fresh, idempotencyKey: crypto.randomUUID() });
+    expect(res.rowErrors).toEqual([]);
+    expect((await listLabels(other)).map((l) => l.name)).toEqual(["Interiér", "Urgent"]);
+    const [copy] = await db.select().from(projects).where(and(eq(projects.workspaceId, other.workspaceId), eq(projects.name, "Příliš žluťoučký kůň")));
+    expect(copy).toMatchObject({ contactName: "Jana Nováková", contactEmail: "jana@example.com", contactPhone: "+420 777 123 456" });
+    expect((await getProject(other, copy.id)).labelIds).toHaveLength(2);
+
+    // Update mode: editing the Labels cell replaces the set (case/accent-insensitive match to existing labels).
+    const edit = reimport(parseCsv(csv, "export.csv"));
+    const li = edit.header.indexOf("Labels");
+    for (const r of edit.rows) if (r[0] === a.id) r[li] = "interier, Nový";
+    await commitImport(ctx, { ...edit, idempotencyKey: crypto.randomUUID() });
+    const names = new Map((await listLabels(ctx)).map((l) => [l.id, l.name]));
+    expect((await getProject(ctx, a.id)).labelIds.map((id) => names.get(id)).sort()).toEqual(["Interiér", "Nový"]);
+    expect([...names.values()].sort()).toEqual(["Interiér", "Nový", "Urgent"]);
+  });
+
+  it("old files without label/contact columns still import and leave them alone", async () => {
+    const { ctx, a } = await seed();
+    const cur = await getProject(ctx, a.id);
+    await updateProject(ctx, a.id, { contactName: "Keep", version: cur.project.version });
+    const res = await commitImport(ctx, { ...reimport({ source: "csv", label: "old", sheets: [{ name: "s", rows: [["Project ID", "Project", "Client"], [a.id, "Příliš žluťoučký kůň", "New client"]] }] }), idempotencyKey: crypto.randomUUID() });
+    expect(res.updated.projects).toBe(1);
+    expect((await getProject(ctx, a.id)).project).toMatchObject({ contactName: "Keep", client: "New client" });
+  });
+
+  it("rejects an invalid contact email or phone per row", async () => {
+    const ctx = await makeCtx();
+    const plan = await previewImport(ctx, reimport({ source: "csv", label: "x", sheets: [{ name: "s", rows: [["Project", "Contact email", "Phone"], ["A", "nope", ""], ["B", "", "abc"]] }] }, "create"));
+    expect(plan.issues.map((i) => i.code).sort()).toEqual(["invalidContactEmail", "invalidPhone"]);
   });
 });

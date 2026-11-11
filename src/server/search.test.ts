@@ -200,3 +200,25 @@ describe("search coverage and filters", () => {
     expect((await search(ctx, "typ:projekt dum")).projects).toHaveLength(10);
   });
 });
+
+describe("exact phrase search", () => {
+  it("parses a double-quoted phrase as one term, mixed with words and filters", () => {
+    expect(parseQuery('"site visit" klient:"Stavby Novák" brick').terms).toEqual(["site visit", "brick"]);
+    expect(parseQuery('"  Site   VISIT "').terms).toEqual(["Site VISIT"]);
+    expect(parseQuery('""').terms).toEqual([]);
+    expect(parseQuery('"open phrase').terms).toEqual(["open phrase"]);
+  });
+
+  it("matches the phrase only when the words are adjacent, accent- and case-insensitive", async () => {
+    const ctx = await makeCtx();
+    const a = await createProject(ctx, { name: "Alpha", notes: "Naplánovaná Schůzka s klientem v pondělí" });
+    await createProject(ctx, { name: "Beta", notes: "schůzka a potom klient" });
+    await createTask(ctx, a.id, { title: "Schuzka s klientem" });
+    const r = await search(ctx, '"SCHUZKA S KLIENTEM"');
+    expect(r.projects.map((x) => x.name)).toEqual(["Alpha"]);
+    expect(r.tasks).toHaveLength(1);
+    expect((await search(ctx, "schůzka klient")).projects).toHaveLength(2); // unquoted: words anywhere
+    expect(highlight("Naplánovaná Schůzka s klientem", r.query.terms).filter((s) => s.match).map((s) => s.text)).toEqual(["Schůzka s klientem"]);
+  });
+});
+

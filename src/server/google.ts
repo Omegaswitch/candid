@@ -14,8 +14,8 @@ import { AppError } from "./errors";
 // Scopes: spreadsheets (read the sheet the user pastes, create/write export sheets), openid + email
 // (to show which account is connected). No Drive scope: the user pastes the spreadsheet link.
 
-export const PROVIDER = "google";
-export const SCOPES = "https://www.googleapis.com/auth/spreadsheets openid email";
+const PROVIDER = "google";
+const SCOPES = "https://www.googleapis.com/auth/spreadsheets openid email";
 const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -26,7 +26,7 @@ const STATE_TTL_MS = 10 * 60_000;
 const EXPIRY_SKEW_MS = 60_000;
 const MAX_CELLS = 500_000;
 
-export const googleConfigured = () =>
+const googleConfigured = () =>
   !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.APP_URL && process.env.TOKEN_ENCRYPTION_KEY);
 
 const redirectUri = () => `${process.env.APP_URL!.replace(/\/$/, "")}/api/google/callback`;
@@ -287,7 +287,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Calls the Sheets API with the caller's token. 401 → one forced refresh, then reconnect.
  * 429 → retried twice with backoff. 403/404 → "no access" (or a precise reason when Google gives one).
  */
-export async function sheetsFetch<T>(ctx: Ctx, url: string, init: { method?: string; json?: unknown } = {}): Promise<T> {
+async function sheetsFetch<T>(ctx: Ctx, url: string, init: { method?: string; json?: unknown } = {}): Promise<T> {
   let token = await getAccessToken(ctx);
   let refreshed = false;
   for (let attempt = 0; ; attempt++) {

@@ -26,6 +26,5 @@ export const analytics: Localized<typeof import("../en/analytics").analytics> = 
   busiest: "Nejvytíženější členové týmu",
   busiestHint: "Přiřazené otevřené úkoly",
   noBusy: "Nikdo nemá přiřazený otevřený úkol.",
-  openTasks: "otevřených",
   overdueShort: "po termínu",
 };

@@ -45,7 +45,7 @@ function setDetail(qc: QueryClient, id: string, fn: (d: ProjectDetail) => Projec
 function setTask(qc: QueryClient, projectId: string, taskId: string, fn: (t: TaskRow) => TaskRow) {
   setDetail(qc, projectId, (d) => ({ ...d, tasks: d.tasks.map((x) => (x.id === taskId ? fn(x) : x)) }));
 }
-export function findTask(qc: QueryClient, projectId: string, taskId: string) {
+function findTask(qc: QueryClient, projectId: string, taskId: string) {
   return qc.getQueryData<ProjectDetail>(qk.project(projectId))?.tasks.find((x) => x.id === taskId);
 }
 function setSummary(qc: QueryClient, id: string, fn: (s: ProjectSummary) => ProjectSummary) {

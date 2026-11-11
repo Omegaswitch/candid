@@ -5,7 +5,7 @@ import { memberships, projects, tasks } from "@/db/schema";
 import type { Ctx } from "./context";
 import { addDays } from "./tasks";
 
-export const ANALYTICS_WEEKS = 12;
+const ANALYTICS_WEEKS = 12;
 
 export type Analytics = {
   projects: { active: number; waiting: number; completed: number };

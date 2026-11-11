@@ -28,7 +28,8 @@ import type { Prefs } from "@/server/preferences";
 import type { ProjectSummary } from "@/server/projects";
 import { DuplicateDialog } from "./duplicate-dialog";
 import { type CardActions, ProjectCard } from "./project-card";
-import { activeFilterCount, type Filters, ProjectToolbar } from "./project-filters";
+import { activeFilterCount, type Filters, NO_FILTERS, ProjectToolbar } from "./project-filters";
+import { useSession } from "@/components/app/session";
 import { ProjectSheet } from "./project-sheet";
 import { ProjectTable } from "./project-table";
 import { ProjectBoard } from "./project-board";
@@ -37,7 +38,7 @@ import dynamic from "next/dynamic";
 
 const ExportDialog = dynamic(() => import("@/components/import-export/export-dialog").then((m) => m.ExportDialog), { ssr: false });
 
-const DEFAULT_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null, labelId: null };
+const DEFAULT_FILTERS: Filters = NO_FILTERS;
 
 function matchesDue(p: ProjectSummary, due: Filters["due"], today: string) {
   if (!due) return true;
@@ -73,6 +74,7 @@ export function Dashboard() {
   const setPinned = useSetPinned();
   const setArchived = useSetArchived();
   const openId = useOpenProjectId();
+  const me = useSession().membershipId;
   const [duplicating, setDuplicating] = useState<ProjectSummary | null>(null);
   const today = todayLocal();
 
@@ -92,6 +94,7 @@ export function Dashboard() {
     if (!all) return [];
     const list = all.filter(
       (p) =>
+        (!filters.mine || p.ownerId === me || p.openAssigneeIds?.includes(me)) &&
         (!filters.ownerId || p.ownerId === filters.ownerId) &&
         (!filters.status || p.status === filters.status) &&
         (!filters.priority || p.priority === filters.priority) &&
@@ -99,7 +102,7 @@ export function Dashboard() {
         matchesDue(p, filters.due, today),
     );
     return list.sort(SORTS[sort]);
-  }, [all, filters, sort, today, labelExists]);
+  }, [all, filters, sort, today, labelExists, me]);
 
   const finding = useMemo(() => {
     if (!all) return null;

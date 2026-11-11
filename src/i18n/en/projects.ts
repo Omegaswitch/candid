@@ -39,6 +39,8 @@ export const projects = {
 
   filters: {
     label: "Filters",
+    mine: "Mine",
+    mineHint: "Projects I own or where I have open steps",
     owner: "Owner",
     status: "Status",
     due: "Due date",
@@ -90,7 +92,6 @@ export const projects = {
   },
   reorderHint: "Drag cards to reorder, or use Move up and Move down in a card's menu.",
   reorderOff: "Manual reorder works with Manual order and no filters.",
-  reordered: "Order saved",
   couldNotReorder: "Could not save the new order",
   dragHandle: "Reorder {name}",
   dragStart: "Picked up {name}. Use the arrow keys to move it, Space to drop, Escape to cancel.",
@@ -114,6 +115,7 @@ export const projects = {
     archive: "Archive",
     moveUp: "Move up",
     moveDown: "Move down",
+    moveTo: "Move to",
   },
   pinned: "Pinned",
   unpinned: "Unpinned",

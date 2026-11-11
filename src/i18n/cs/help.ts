@@ -24,7 +24,9 @@ export const help: Localized<typeof en> = {
         "Okraj karty se zbarví do oranžova, když se blíží termín, a do červena, když je po termínu.",
         "Pod kruhem najdete další krok, termín, průběh, stav a vlastníka.",
         "Čísla nahoře (aktivní projekty, úkoly po termínu, splatné tento týden) jsou klikací.",
-        "Filtry (vlastník, stav, termín, priorita) a řazení si Candid pamatuje. Tlačítky vpravo přepnete mezi kartami a tabulkou.",
+        "Filtry (vlastník, stav, termín, priorita) a řazení si Candid pamatuje. Tlačítky vpravo přepnete mezi kartami, tabulkou a pipeline podle stavu.",
+        "Tlačítko „Moje“ jedním klikem ukáže jen projekty, které vlastníte nebo kde máte otevřené kroky.",
+        "Pipeline funguje i na telefonu: sloupce posouváte do strany. Na dotykové obrazovce kartu přesunete přes nabídku ⋯ → „Přesunout do“.",
       ],
     },
     {
@@ -47,6 +49,8 @@ export const help: Localized<typeof en> = {
         "Nabídka ⋯ u kroku: posunout nahoru či dolů, odebrat. Kroky lze i přetáhnout za úchyt.",
         "U kroku můžete nastavit, kdo ho má na starosti, termín, poznámku a označení „Čeká se“ s důvodem.",
         "Přepínač „Rozdělit podle lidí“ rozdělí kroky do oddílů podle řešitele, každý s počtem hotových kroků. Přetažením kroku do jiného oddílu ho přiřadíte někomu jinému.",
+        "Otevřené kroky jsou číslované průběžně (1., 2., 3. …), i když jsou rozdělené podle lidí.",
+        "U kroku po termínu klikněte na „Po termínu“ a termín posuňte o den, o týden nebo vyberte nové datum.",
         "Režim výběru umožní hromadně dokončit kroky, přiřadit je nebo změnit termín.",
         "Když jsou všechny kroky hotové, Candid nabídne označit projekt jako dokončený.",
       ],
@@ -67,6 +71,15 @@ export const help: Localized<typeof en> = {
         "V levém menu najdete úkoly napříč projekty: přiřazené vám, splatné do 7 dnů, po termínu a čekající na někoho jiného.",
         "Úkoly jsou seřazené podle termínu a odškrtnout je můžete přímo v seznamu.",
         "Kliknutím na název projektu otevřete jeho panel.",
+      ],
+    },
+    {
+      id: "hledani",
+      title: "Hledání",
+      steps: [
+        "Stiskněte Ctrl / ⌘ + K (nebo /) a pište. Projekty, kroky i dokumenty se najdou bez ohledu na velká písmena a diakritiku.",
+        "Každé slovo musí v nálezu někde být. Slova v\u00a0uvozovkách vyhledají přesnou frázi, např. „schůzka s\u00a0klientem“.",
+        "Filtry: klient:Název, štítek:Název, typ:projekt|úkol|dokument a po termínu. Hodnoty s\u00a0mezerou dejte do uvozovek: klient:\"Stavby Novák\".",
       ],
     },
     {
@@ -96,6 +109,7 @@ export const help: Localized<typeof en> = {
         "Šablonu pro import stáhnete ve stejné nabídce.",
         "Export: jeden projekt, vybrané projekty, aktuální pohled nebo celý prostor, jako CSV, Excel nebo Google Tabulka.",
         "Exportovaný soubor lze po úpravách znovu naimportovat v režimu „Aktualizovat“ bez duplicit.",
+        "Součástí jsou i sloupce Štítky (názvy oddělené čárkami; chybějící se vytvoří) a kontakt klienta (jméno, e-mail, telefon). Starší soubory bez nich se naimportují také.",
       ],
     },
     {
@@ -130,5 +144,6 @@ export const help: Localized<typeof en> = {
     { keys: "T", what: "Přidat krok do otevřeného projektu (mimo textové pole)" },
     { keys: "Enter", what: "Uložit úpravu názvu nebo přidat krok" },
     { keys: "Esc", what: "Zrušit úpravu nebo zavřít panel" },
+    { keys: "?", what: "Zobrazit klávesové zkratky (mimo textové pole)" },
   ],
 };

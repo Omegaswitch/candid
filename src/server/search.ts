@@ -6,7 +6,7 @@ import { documents, labels, projectLabels, projects, tasks } from "@/db/schema";
 import { CS_FROM, CS_TO, allTermsIn, hasCriteria, parseQuery, type ParsedQuery, type SearchType } from "@/lib/search-query";
 import type { Ctx } from "./context";
 
-export const searchQuery = z.string().trim().min(1).max(100);
+const searchQuery = z.string().trim().min(1).max(100);
 const isoDay = z.iso.date();
 
 export type Snippet = { text: string; before: boolean; after: boolean };

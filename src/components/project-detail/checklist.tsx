@@ -50,7 +50,7 @@ import { Initials } from "@/components/projects/project-bits";
 import { ProgressRing } from "@/components/projects/progress-ring";
 
 /** The step ring and "2 of 4 completed"; the ring fills one step per ticked item. */
-export function Progress({ tasks }: { tasks: Task[] }) {
+function Progress({ tasks }: { tasks: Task[] }) {
   const done = tasks.filter((x) => x.done).length;
   const next = tasks.find((x) => !x.done);
   return (

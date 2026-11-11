@@ -23,6 +23,10 @@ export const IMPORT_FIELDS = [
   "projectDueDate",
   "priority",
   "projectNote",
+  "labels",
+  "contactName",
+  "contactEmail",
+  "contactPhone",
   "task",
   "completed",
   "assigneeEmail",
@@ -91,6 +95,8 @@ export type IssueCode =
   | "unknownEmailKept"
   | "formula"
   | "tooLong"
+  | "invalidContactEmail"
+  | "invalidPhone"
   | "duplicateProject"
   | "duplicateTask"
   | "conflictingValue"

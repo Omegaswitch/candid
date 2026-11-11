@@ -14,7 +14,7 @@ const STOPS: [number, number, number][] = [
   [22, 163, 74],
 ];
 /** A colour from the scale at 0..1, interpolated between stops so the change is gradual. */
-export function stageColour(x: number) {
+function stageColour(x: number) {
   const f = Math.min(1, Math.max(0, x)) * (STOPS.length - 1);
   const i = Math.min(STOPS.length - 2, Math.floor(f));
   const k = f - i;

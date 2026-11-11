@@ -16,9 +16,9 @@ import { notFound } from "./errors";
  * RFC 9207 `iss` in the redirect, and rotating refresh tokens. Tokens are opaque; only sha256 is stored.
  */
 
-export const SCOPE = "mcp";
-export const ACCESS_PREFIX = "candat_";
-export const REFRESH_PREFIX = "candrt_";
+const SCOPE = "mcp";
+const ACCESS_PREFIX = "candat_";
+const REFRESH_PREFIX = "candrt_";
 const CODE_TTL_MS = 60_000;
 const ACCESS_TTL_S = 3600;
 const REFRESH_TTL_MS = 30 * 24 * 3600_000;
@@ -36,7 +36,7 @@ export function baseUrl(req?: Request) {
   return req ? new URL(req.url).origin : "http://localhost:3000";
 }
 
-export const urls = (base: string) => ({
+const urls = (base: string) => ({
   issuer: base,
   resource: `${base}/api/mcp`,
   resourceMetadata: `${base}/.well-known/oauth-protected-resource/api/mcp`,
@@ -97,7 +97,7 @@ export class OAuthError extends Error {
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /** https anywhere, or http on a loopback host (native clients such as Claude Code). */
-export function validRedirectUri(raw: string) {
+function validRedirectUri(raw: string) {
   if (raw.length > 2000 || /[\s"'<>`\\]/.test(raw)) return false;
   let u: URL;
   try {
@@ -168,7 +168,7 @@ export async function registerClient(raw: unknown) {
   };
 }
 
-export async function getClient(id: string | null | undefined) {
+async function getClient(id: string | null | undefined) {
   if (!id || !z.uuid().safeParse(id).success) return null;
   const [row] = await db.select().from(oauthClients).where(eq(oauthClients.id, id));
   return row ?? null;
@@ -205,7 +205,7 @@ export type AuthorizeCheck =
   | { ok: false; redirect: null; message: string }
   | { ok: false; redirect: string; message: string };
 
-export const callbackUrl = (redirectUri: string, base: string, params: Record<string, string | null>) => {
+const callbackUrl = (redirectUri: string, base: string, params: Record<string, string | null>) => {
   const u = new URL(redirectUri);
   for (const [k, v] of Object.entries(params)) if (v !== null) u.searchParams.set(k, v);
   u.searchParams.set("iss", urls(base).issuer);
@@ -464,7 +464,7 @@ export async function revokeGrant(ctx: Ctx, id: string) {
 // ---------------------------------------------------------------- HTTP helpers for the public endpoints
 
 /** Metadata, registration and token endpoints are called cross-origin by browser-based MCP clients. */
-export const CORS = {
+const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Authorization, Content-Type, MCP-Protocol-Version",

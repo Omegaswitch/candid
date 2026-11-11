@@ -34,6 +34,7 @@ import { useSession } from "./session";
 import { ThemeMenu } from "./theme-menu";
 import { UserMenu } from "./user-menu";
 import { OfflineNotice } from "./offline-notice";
+import { ShortcutsDialog } from "./shortcuts-dialog";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; count?: "mine" | "dueThisWeek" | "overdue" | "waiting" };
 
@@ -188,6 +189,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <OfflineNotice />
+        <ShortcutsDialog />
         <main id="main" tabIndex={-1} className="flex-1 px-4 pb-10 pt-6 outline-none lg:px-6">
           {children}
         </main>

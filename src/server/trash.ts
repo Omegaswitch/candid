@@ -7,7 +7,7 @@ import type { Ctx } from "./context";
 import { notFound } from "./errors";
 
 /** How long deleted things stay restorable before the daily cleanup erases them. */
-export const TRASH_DAYS = 10;
+const TRASH_DAYS = 10;
 const DAY = 86_400_000;
 
 export type TrashItem = { kind: "project" | "task" | "document"; id: string; name: string; context: string | null; deletedAt: string; purgeOn: string };

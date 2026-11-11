@@ -2,8 +2,9 @@ import "server-only";
 import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type Tx } from "@/db";
-import { importRuns, memberships, projects, tasks } from "@/db/schema";
-import { buildPlan, MAX_IMPORT_ROWS, referencedIds, type ApplyProject, type WorkspaceSnapshot } from "@/lib/import/plan";
+import { importRuns, labels, memberships, projectLabels, projects, tasks } from "@/db/schema";
+import { normaliseHeader } from "@/lib/import/mapping";
+import { buildPlan, canonLabels, MAX_IMPORT_ROWS, referencedIds, type ApplyProject, type WorkspaceSnapshot } from "@/lib/import/plan";
 import { IMPORT_FIELDS, type ImportPlan, type ImportRequest, type ImportResult } from "@/lib/import/types";
 import { logActivity } from "./activity";
 import type { Ctx } from "./context";
@@ -19,7 +20,7 @@ const cell = z.union([
 const dateOrder = z.enum(["dmy", "mdy"]);
 const rowNumbers = z.array(z.int().positive()).max(MAX_IMPORT_ROWS + 10).default([]);
 
-export const importRequest = z.object({
+const importRequest = z.object({
   source: z.enum(["csv", "xlsx", "paste", "google"]),
   label: z.string().trim().max(300).default(""),
   header: z.array(z.string().max(300)).max(100),
@@ -35,7 +36,7 @@ export const importRequest = z.object({
     acceptDuplicates: rowNumbers,
   }),
 });
-export const importCommit = importRequest.extend({ idempotencyKey: z.uuid() });
+const importCommit = importRequest.extend({ idempotencyKey: z.uuid() });
 
 /** Size check before the schema, so a big file gets a clear 413 instead of a validation error. */
 function parseRequest<T extends z.ZodType>(schema: T, raw: unknown): z.output<T> {
@@ -78,6 +79,9 @@ async function loadSnapshot(ctx: Ctx, req: ImportRequest, tx: Tx | typeof db = d
       priority: projects.priority,
       ownerId: projects.ownerId,
       dueDate: projects.dueDate,
+      contactName: projects.contactName,
+      contactEmail: projects.contactEmail,
+      contactPhone: projects.contactPhone,
       version: projects.version,
       archivedAt: projects.archivedAt,
       // Notes can be long: only for the projects the file refers to.
@@ -89,8 +93,18 @@ async function loadSnapshot(ctx: Ctx, req: ImportRequest, tx: Tx | typeof db = d
     .select({ id: memberships.id, email: memberships.email })
     .from(memberships)
     .where(and(eq(memberships.workspaceId, ctx.workspaceId), ne(memberships.status, "removed")));
+  const workspaceLabels = await tx.select({ id: labels.id, name: labels.name }).from(labels).where(eq(labels.workspaceId, ctx.workspaceId));
+  const labelNames = new Map(workspaceLabels.map((l) => [l.id, l.name]));
+  const onProject = new Map<string, string[]>();
+  if (wanted.length) {
+    for (const r of await tx.select().from(projectLabels).where(inArray(projectLabels.projectId, wanted))) {
+      const name = labelNames.get(r.labelId);
+      if (name) onProject.set(r.projectId, [...(onProject.get(r.projectId) ?? []), name]);
+    }
+  }
   return {
-    projects: projectRows.map(({ archivedAt, ...p }) => ({ ...p, archived: !!archivedAt })),
+    labels: workspaceLabels.map((l) => l.name),
+    projects: projectRows.map(({ archivedAt, ...p }) => ({ ...p, labels: canonLabels((onProject.get(p.id) ?? []).join(","), [...labelNames.values()]), archived: !!archivedAt })),
     tasks: taskRows.map((t) => ({ id: t.id, projectId: t.projectId, title: t.title, done: t.done, assigneeId: t.assigneeId, dueDate: t.dueDate, note: t.note, version: t.version })),
     members,
   };
@@ -158,6 +172,23 @@ async function applyPlan(ctx: Ctx, tx: Tx, apply: ApplyProject[], mode: "create"
     .from(projects)
     .where(eq(projects.workspaceId, ctx.workspaceId));
   let nextTop = min - newProjects; // new projects go on top, in file order
+  const known = new Map<string, string>(); // normalised name → label id, filled lazily
+  const labelIds = async (csv: string | null) => {
+    if (!known.size) {
+      for (const l of await tx.select({ id: labels.id, name: labels.name }).from(labels).where(eq(labels.workspaceId, ctx.workspaceId))) known.set(normaliseHeader(l.name), l.id);
+    }
+    const ids: string[] = [];
+    for (const name of (csv ?? "").split(",").map((n) => n.trim()).filter(Boolean)) {
+      const k = normaliseHeader(name);
+      let id = known.get(k);
+      if (!id) {
+        [{ id }] = await tx.insert(labels).values({ workspaceId: ctx.workspaceId, name }).returning({ id: labels.id });
+        known.set(k, id);
+      }
+      ids.push(id);
+    }
+    return [...new Set(ids)];
+  };
 
   for (const p of apply) {
     const creates = p.tasks.filter((t) => t.action === "create");
@@ -165,16 +196,17 @@ async function applyPlan(ctx: Ctx, tx: Tx, apply: ApplyProject[], mode: "create"
     if (p.action === "unchanged" && !creates.length && !taskUpdates) continue;
 
     let projectId: string;
+    const { labels: labelCsv, ...values } = p.values;
     if (p.action === "create") {
       const [row] = await tx
         .insert(projects)
-        .values({ ...p.values, name: p.values.name!, workspaceId: ctx.workspaceId, createdBy: ctx.membershipId, position: nextTop++ })
+        .values({ ...values, name: p.values.name!, workspaceId: ctx.workspaceId, createdBy: ctx.membershipId, position: nextTop++ })
         .returning({ id: projects.id });
       projectId = row.id;
       created.projects++;
     } else if (p.action === "update") {
       projectId = p.id!;
-      const { notes, ...rest } = p.values;
+      const { notes, ...rest } = values;
       const [row] = await tx
         .update(projects)
         .set({
@@ -191,6 +223,12 @@ async function applyPlan(ctx: Ctx, tx: Tx, apply: ApplyProject[], mode: "create"
     } else {
       projectId = p.id!;
       await tx.update(projects).set({ updatedAt: now, lastActivityAt: now }).where(and(eq(projects.id, projectId), eq(projects.workspaceId, ctx.workspaceId)));
+    }
+
+    if (labelCsv !== undefined) {
+      const ids = await labelIds(labelCsv);
+      await tx.delete(projectLabels).where(eq(projectLabels.projectId, projectId));
+      if (ids.length) await tx.insert(projectLabels).values(ids.map((labelId) => ({ projectId, labelId })));
     }
 
     if (creates.length) {

@@ -290,7 +290,7 @@ export async function finalizeUpload(ctx: Ctx, uploadId: string, opts: { replace
  * not be read. A storage read failure leaves `textExtractedAt` null so the backfill retries it; a
  * PDF that cannot be parsed (encrypted, corrupt, timeout) is marked done with no text.
  */
-export async function textFields(
+async function textFields(
   key: string,
   mimeType: string | null,
   size: number,

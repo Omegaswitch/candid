@@ -9,7 +9,6 @@ export const documents: Localized<typeof import("../en/documents").documents> = 
   shelfRegion: "Police s\u00a0dokumenty",
   viewAll: "Zobrazit vše",
   add: "Přidat dokument",
-  addTo: "Přidat dokument",
   uploadFile: "Nahrát soubor",
   addLink: "Přidat odkaz",
   dropHint: "nebo sem přetáhněte soubory",
@@ -40,7 +39,6 @@ export const documents: Localized<typeof import("../en/documents").documents> = 
   renameLabel: "Název dokumentu",
   renamed: "Přejmenováno",
   removed: "Odebráno: {name}",
-  pinnedToast: "{name}: připnuto do postranního panelu",
   link: {
     title: "Přidat odkaz",
     description: "Sdílejte s\u00a0týmem webovou stránku, složku na sdíleném disku nebo jinou adresu.",
@@ -73,7 +71,6 @@ export const documents: Localized<typeof import("../en/documents").documents> = 
     next: "Další příloha",
     noPreview: "Pro tento typ souboru není k\u00a0dispozici náhled.",
     download: "Stáhnout",
-    openLink: "Otevřít odkaz",
     details: "{type} · {size}",
   },
 };

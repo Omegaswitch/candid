@@ -1,6 +1,6 @@
 "use client";
 
-import { Columns3, LayoutGrid, ListFilter, Rows3 } from "lucide-react";
+import { Columns3, LayoutGrid, ListFilter, Rows3, UserRound } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -56,7 +56,26 @@ function FilterSelect<V extends string>({
   );
 }
 
-export const activeFilterCount = (fl: Filters) => Object.values(fl).filter((v) => v !== null).length;
+export const activeFilterCount = (fl: Filters) => Object.values(fl).filter((v) => v !== null && v !== false).length;
+export const NO_FILTERS: Filters = { ownerId: null, status: null, priority: null, due: null, labelId: null, mine: false };
+
+/** "Mine" in one click: projects I own or where I have open steps. Kept with the other filters in prefs. */
+function MineToggle({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
+  return (
+    <Button
+      variant="outline"
+      aria-pressed={filters.mine}
+      title={f.mineHint}
+      onClick={() => onChange({ ...filters, mine: !filters.mine })}
+      className={cn(
+        "h-9 bg-card md:h-8",
+        filters.mine && "border-foreground bg-foreground text-background hover:bg-foreground/90 hover:text-background dark:bg-foreground dark:hover:bg-foreground/90",
+      )}
+    >
+      <UserRound /> {f.mine}
+    </Button>
+  );
+}
 
 function FilterFields({ filters, onChange, wide }: { filters: Filters; onChange: (f: Filters) => void; wide?: boolean }) {
   const members = useMembers();
@@ -123,12 +142,15 @@ export function ProjectToolbar({
 }) {
   const [sheet, setSheet] = useState(false);
   const n = activeFilterCount(filters);
-  const clear = () => onFilters({ ownerId: null, status: null, priority: null, due: null, labelId: null });
+  // The sheet's badge counts what is inside the sheet; "Mine" sits beside it.
+  const inSheet = activeFilterCount({ ...filters, mine: false });
+  const clear = () => onFilters(NO_FILTERS);
 
   return (
     <div className="flex items-center gap-2">
       {/* Desktop and tablet: the filters read left to right. */}
       <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-2 md:flex">
+        <MineToggle filters={filters} onChange={onFilters} />
         <FilterFields filters={filters} onChange={onFilters} />
         {n > 0 && (
           <Button variant="ghost" size="sm" onClick={clear}>
@@ -137,11 +159,12 @@ export function ProjectToolbar({
         )}
       </div>
       {/* Phone: one button opens the filters in a sheet. */}
-      <div className="flex flex-1 md:hidden">
+      <div className="flex min-w-0 flex-1 gap-2 md:hidden">
         <Button variant="outline" className="h-9 bg-card" onClick={() => setSheet(true)} aria-haspopup="dialog">
-          <ListFilter /> {f.label}
-          {n > 0 && <span className="num rounded-full bg-foreground px-1.5 text-xs text-background">{n}</span>}
+          <ListFilter /> <span className="sr-only min-[400px]:not-sr-only">{f.label}</span>
+          {inSheet > 0 && <span className="num rounded-full bg-foreground px-1.5 text-xs text-background">{inSheet}</span>}
         </Button>
+        <MineToggle filters={filters} onChange={onFilters} />
         <Sheet open={sheet} onOpenChange={setSheet}>
           <SheetContent side="bottom" className="gap-3 rounded-t-xl pb-6">
             <SheetHeader className="pb-0">
@@ -150,7 +173,7 @@ export function ProjectToolbar({
             <div className="flex flex-col gap-2 px-4">
               <FilterFields filters={filters} onChange={onFilters} wide />
               <div className="mt-2 flex gap-2">
-                <Button variant="outline" className="h-10 flex-1" onClick={clear} disabled={!n}>
+                <Button variant="outline" className="h-10 flex-1" onClick={() => onFilters({ ...NO_FILTERS, mine: filters.mine })} disabled={!inSheet}>
                   {f.clear}
                 </Button>
                 <Button className="h-10 flex-1" onClick={() => setSheet(false)}>
@@ -188,7 +211,7 @@ export function ProjectToolbar({
           value={view}
           onValueChange={(v) => v && onView(v as Prefs["view"])}
           aria-label={t.projects.view.label}
-          className="hidden bg-card sm:flex"
+          className="bg-card"
         >
           <ToggleGroupItem value="grid" aria-label={t.projects.view.grid}>
             <LayoutGrid />

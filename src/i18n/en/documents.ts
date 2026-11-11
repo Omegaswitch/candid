@@ -8,7 +8,6 @@ export const documents = {
   shelfRegion: "Document shelf",
   viewAll: "View all",
   add: "Add document",
-  addTo: "Add a document",
   uploadFile: "Upload file",
   addLink: "Add link",
   dropHint: "or drop files here",
@@ -39,7 +38,6 @@ export const documents = {
   renameLabel: "Document name",
   renamed: "Renamed",
   removed: "{name} removed",
-  pinnedToast: "{name} pinned to the sidebar",
   link: {
     title: "Add link",
     description: "Share a web page, a shared drive folder or any other address with the team.",
@@ -69,7 +67,6 @@ export const documents = {
   preview: {
     noPreview: "There is no preview for this file type.",
     download: "Download",
-    openLink: "Open link",
     newTab: "Open in new tab",
     previous: "Previous attachment",
     next: "Next attachment",

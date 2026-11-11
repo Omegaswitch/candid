@@ -38,7 +38,7 @@ export function assertSameOrigin(req: NextRequest) {
   }
 }
 
-export function errorResponse(e: unknown) {
+function errorResponse(e: unknown) {
   if (e instanceof AppError) {
     return NextResponse.json({ error: { code: e.code, message: e.message, details: e.details } }, { status: e.status });
   }

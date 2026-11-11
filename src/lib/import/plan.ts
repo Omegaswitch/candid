@@ -21,7 +21,7 @@ import type {
 // The server builds the snapshot (filtered by workspace) and applies `apply` in one transaction.
 
 export const MAX_IMPORT_ROWS = 5000;
-const LIMITS = { name: 200, client: 200, title: 500, taskNote: 20_000, projectNote: 100_000 };
+const LIMITS = { name: 200, client: 200, title: 500, taskNote: 20_000, projectNote: 100_000, contact: 200, phone: 50, label: 60 };
 
 export type ProjectStatus = "active" | "waiting" | "completed";
 export type Priority = "normal" | "high";
@@ -36,6 +36,11 @@ export type SnapshotProject = {
   dueDate: string | null;
   /** Only needed for projects the file references by ID. */
   notes: string;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  /** Label names, canonical (see `canonLabels`). Only needed for projects the file references by ID. */
+  labels: string | null;
   version: number;
   archived: boolean;
 };
@@ -55,6 +60,8 @@ export type WorkspaceSnapshot = {
   /** Tasks of referenced projects and tasks referenced by ID. */
   tasks: SnapshotTask[];
   members: { id: string; email: string }[];
+  /** Names of the workspace's labels, so spelling and case of existing ones win over the file's. */
+  labels: string[];
 };
 
 export type ProjectValues = {
@@ -65,6 +72,11 @@ export type ProjectValues = {
   ownerId: string | null;
   dueDate: string | null;
   notes: string;
+  /** Canonical comma-separated label names; the server finds or creates them. */
+  labels: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
 };
 export type TaskValues = { title: string; done: boolean; assigneeId: string | null; dueDate: string | null; note: string };
 
@@ -92,6 +104,19 @@ export function referencedIds(req: Pick<ImportRequest, "rows" | "mapping">) {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE = /^[+\d\s()./-]*$/;
+
+/** Splits a comma-separated cell into distinct names (accents/case ignored), existing spellings first, sorted. */
+export function canonLabels(text: string | null | undefined, known: string[] = []): string | null {
+  const spelling = new Map(known.map((n) => [normaliseHeader(n), n]));
+  const out = new Map<string, string>();
+  for (const part of (text ?? "").split(",")) {
+    const name = part.trim();
+    const k = normaliseHeader(name);
+    if (k && !out.has(k)) out.set(k, spelling.get(k) ?? name);
+  }
+  return out.size ? [...out.values()].sort((a, b) => a.localeCompare(b)).join(", ") : null;
+}
 
 const STATUS: Record<string, ProjectStatus> = {
   active: "active",
@@ -118,6 +143,10 @@ type RowData = {
   dueDate?: string | null;
   priority?: Priority | null;
   notes?: string | null;
+  labels?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
   taskId?: string;
   title?: string | null;
   done?: boolean;
@@ -240,6 +269,24 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
     d.dueDate = date("projectDueDate");
     d.priority = choice("priority", PRIORITY, "invalidPriority");
     d.notes = text("projectNote", LIMITS.projectNote);
+    d.contactName = text("contactName", LIMITS.contact);
+    d.contactEmail = text("contactEmail", LIMITS.contact);
+    if (d.contactEmail && !EMAIL.test(d.contactEmail)) {
+      fail("invalidContactEmail", "contactEmail", d.contactEmail);
+      d.contactEmail = undefined;
+    }
+    d.contactPhone = text("contactPhone", LIMITS.phone);
+    if (d.contactPhone && !PHONE.test(d.contactPhone)) {
+      fail("invalidPhone", "contactPhone", d.contactPhone);
+      d.contactPhone = undefined;
+    }
+    const labelText = text("labels");
+    if (labelText === undefined) d.labels = undefined;
+    else {
+      d.labels = canonLabels(labelText, snap.labels);
+      const long = (d.labels ?? "").split(", ").find((n) => n.length > LIMITS.label);
+      if (long) fail("tooLong", "labels", long.slice(0, 40));
+    }
     d.title = text("task", LIMITS.title);
     const c = raw("completed");
     if (c !== undefined) {
@@ -322,6 +369,10 @@ export function buildPlan(req: ImportRequest, snap: WorkspaceSnapshot): BuiltPla
       dueDate: pick("dueDate", "projectDueDate"),
       priority: pick("priority", "priority"),
       notes: pick("notes", "projectNote"),
+      labels: pick("labels", "labels"),
+      contactName: pick("contactName", "contactName"),
+      contactEmail: pick("contactEmail", "contactEmail"),
+      contactPhone: pick("contactPhone", "contactPhone"),
     };
     const name = target.name ?? g.existing?.name ?? null;
     const client = target.client === undefined ? (g.existing?.client ?? null) : target.client;
@@ -475,6 +526,10 @@ const projectFieldOf: Record<keyof ProjectValues, ImportField> = {
   ownerId: "projectOwnerEmail",
   dueDate: "projectDueDate",
   notes: "projectNote",
+  labels: "labels",
+  contactName: "contactName",
+  contactEmail: "contactEmail",
+  contactPhone: "contactPhone",
 };
 const taskFieldOf: Record<keyof TaskValues, ImportField> = {
   title: "task",

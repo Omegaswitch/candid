@@ -64,6 +64,8 @@ export type ProjectSummary = {
   overdueCount: number;
   waitingCount: number;
   nextTask: { id: string; title: string; dueDate: string | null; assigneeId: string | null } | null;
+  /** Members with at least one open step here (the "Mine" quick filter). */
+  openAssigneeIds: string[];
   pinned: boolean;
   labels: Label[];
 };
@@ -91,6 +93,8 @@ export async function listProjectSummaries(
       doneCount: sql<number>`count(${tasks.id}) filter (where ${live} and ${tasks.done})::int`,
       overdueCount: sql<number>`count(${tasks.id}) filter (where ${live} and not ${tasks.done} and ${tasks.dueDate} < ${today})::int`,
       waitingCount: sql<number>`count(${tasks.id}) filter (where ${live} and not ${tasks.done} and ${tasks.waiting})::int`,
+      openAssigneeIds: sql<string[]>`coalesce(json_agg(distinct ${tasks.assigneeId})
+        filter (where ${live} and not ${tasks.done} and ${tasks.assigneeId} is not null), '[]'::json)`,
       nextTask: sql<ProjectSummary["nextTask"]>`(
         select json_build_object('id', nt.id, 'title', nt.title, 'dueDate', nt.due_date, 'assigneeId', nt.assignee_id)
         from tasks nt where nt.project_id = ${projects.id} and not nt.done and nt.deleted_at is null
@@ -267,7 +271,7 @@ export async function deleteArchivedProject(ctx: Ctx, id: string) {
   });
 }
 
-/** Copies the structure; every task starts open. Notes and dates only when asked. */
+/** Copies the structure, labels and contact; every task starts open. Notes and dates only when asked. */
 export async function duplicateProject(ctx: Ctx, id: string, opts: { name?: string; includeNotes: boolean; includeDates: boolean }) {
   const src = await getProject(ctx, id);
   return createProject(ctx, {
@@ -292,6 +296,13 @@ export async function duplicateProject(ctx: Ctx, id: string, opts: { name?: stri
           position: i,
         })),
       );
+    }
+    // Labels and the client contact belong to the project's identity, so the copy keeps them.
+    if (src.labelIds.length) await db.insert(projectLabels).values(src.labelIds.map((labelId) => ({ projectId: p.id, labelId })));
+    const { contactName, contactEmail, contactPhone } = src.project;
+    if (contactName || contactEmail || contactPhone) {
+      await db.update(projects).set({ contactName, contactEmail, contactPhone }).where(and(eq(projects.id, p.id), eq(projects.workspaceId, ctx.workspaceId)));
+      return { ...p, contactName, contactEmail, contactPhone };
     }
     return p;
   });

@@ -26,8 +26,8 @@ export type Storage = {
   move(from: string, to: string): Promise<void>;
 };
 
-export const UPLOAD_EXPIRES_S = 5 * 60;
-export const DOWNLOAD_EXPIRES_S = 60;
+const UPLOAD_EXPIRES_S = 5 * 60;
+const DOWNLOAD_EXPIRES_S = 60;
 
 export const newStorageKey = (workspaceId: string) => `ws/${workspaceId}/${randomUUID()}`;
 /** Browsers upload here; finalize moves the object to a fresh `ws/…` key no upload policy covers.
@@ -137,7 +137,7 @@ const hmacKey = () => {
 const derivedKey = () => createHmac("sha256", hmacKey()).update("candid:storage-local:v1").digest();
 const sign = (payload: string) => createHmac("sha256", derivedKey()).update(payload).digest("base64url");
 
-export function signLocalToken(t: LocalToken) {
+function signLocalToken(t: LocalToken) {
   const payload = Buffer.from(JSON.stringify(t)).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
