@@ -296,6 +296,25 @@ export const integrationConnections = pgTable(
   (t) => [uniqueIndex("integration_member_provider_uq").on(t.membershipId, t.provider)],
 );
 
+// Personal access tokens for the MCP endpoint (/api/mcp). Only the sha256 of the token is stored;
+// the plain token is shown once on creation. `prefix` is the first characters, for display.
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+    membershipId: uuid("membership_id").notNull().references(() => memberships.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    prefix: text("prefix").notNull(),
+    createdAt: created(),
+    lastUsedAt: ts("last_used_at"),
+    revokedAt: ts("revoked_at"),
+  },
+  (t) => [uniqueIndex("api_tokens_hash_uq").on(t.tokenHash), index("api_tokens_member_idx").on(t.membershipId)],
+);
+
+export type ApiToken = typeof apiTokens.$inferSelect;
 export type Workspace = typeof workspaces.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Project = typeof projects.$inferSelect;

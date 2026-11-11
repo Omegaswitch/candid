@@ -90,7 +90,7 @@ export async function ensureDefaultWorkspace() {
   return ws ?? (await db.select().from(workspaces).where(eq(workspaces.slug, DEFAULT_WORKSPACE.slug)))[0];
 }
 
-function toCtx(userId: string, m: typeof memberships.$inferSelect): Ctx {
+export function toCtx(userId: string, m: typeof memberships.$inferSelect): Ctx {
   return {
     userId,
     membershipId: m.id,

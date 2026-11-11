@@ -29,6 +29,13 @@
       "when": 1793894033616,
       "tag": "0003_labels_contacts_doctext",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794409876892,
+      "tag": "0004_api_tokens",
+      "breakpoints": true
     }
   ]
 }
