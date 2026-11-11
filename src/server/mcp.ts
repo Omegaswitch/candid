@@ -7,7 +7,7 @@ import { listDocuments } from "./documents";
 import { AppError } from "./errors";
 import { createLabel, listLabels, setProjectLabels, type Label } from "./labels";
 import { listMembers, type MemberSummary } from "./members";
-import { createProject, getProject, listProjectSummaries, updateProject, updateProjectNotes } from "./projects";
+import { createProject, getProject, listProjectSummaries, setArchived, updateProject, updateProjectNotes } from "./projects";
 import { search } from "./search";
 import { createTask, listTaskView, loadTask, updateTask } from "./tasks";
 
@@ -59,7 +59,7 @@ export function buildMcpServer(ctx: Ctx) {
     "search",
     {
       description:
-        'Search projects, tasks and documents. Every word must match. Filters: client:X (klient:), label:X (štítek:), type:project|task|document (typ:), "overdue" (po termínu). Quote values with spaces: client:"Stavby Novák".',
+        'Search projects, tasks and documents. Every word must match. Filters: client:X (klient:), label:X (štítek:), type:project|task|document (typ:), "overdue" (po termínu). Quote values with spaces: client:"Stavby Novák". A double-quoted phrase is matched exactly: "site visit".',
       inputSchema: { query: z.string().min(1).max(100), today },
       annotations: { readOnlyHint: true },
     },
@@ -222,6 +222,54 @@ export function buildMcpServer(ctx: Ctx) {
       if (notes !== undefined && notes !== cur.notes) await updateProjectNotes(ctx, projectId, notes, cur.notesVersion);
       return { id: p.id, name: p.name, status: p.status, dueDate: p.dueDate, client: p.client, version: p.version };
     }),
+  );
+
+  server.registerTool(
+    "add_note",
+    {
+      description:
+        "Append text to a project's notes (after a blank line), keeping what is already there. Pass notesVersion (from an earlier read) to fail with a conflict if someone edited the notes since; otherwise the current version is used.",
+      inputSchema: {
+        projectId: id("Project"),
+        text: z.string().min(1).max(100_000),
+        notesVersion: z.int().optional().describe("The notes version you last saw"),
+      },
+    },
+    tool(async ({ projectId, text, notesVersion }) => {
+      const cur = (await getProject(ctx, projectId)).project;
+      const next = cur.notes.trim() ? `${cur.notes.replace(/\s+$/, "")}\n\n${text}` : text;
+      const p = await updateProjectNotes(ctx, projectId, next, notesVersion ?? cur.notesVersion);
+      return { projectId, notesVersion: p.notesVersion, length: p.notes.length };
+    }),
+  );
+
+  server.registerTool(
+    "list_members",
+    {
+      description: "Workspace members (active and invited) with id, name, email and role. Use the email wherever a tool asks for an owner or assignee.",
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    tool(async () => (await listMembers(ctx)).map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role, status: m.status }))),
+  );
+
+  const archiveTool = (archived: boolean) =>
+    tool(async ({ projectId }: { projectId: string }) => {
+      const { project } = await getProject(ctx, projectId);
+      const p = project.archivedAt ? (archived ? project : await setArchived(ctx, projectId, false)) : archived ? await setArchived(ctx, projectId, true) : project;
+      return { id: p.id, name: p.name, archived: !!p.archivedAt, version: p.version };
+    });
+
+  server.registerTool(
+    "archive_project",
+    { description: "Archive a project: it leaves the overview but nothing is deleted, and it can be restored. Does nothing if already archived.", inputSchema: { projectId: id("Project") } },
+    archiveTool(true),
+  );
+
+  server.registerTool(
+    "restore_project",
+    { description: "Restore an archived project to the overview. Does nothing if it is not archived.", inputSchema: { projectId: id("Project") } },
+    archiveTool(false),
   );
 
   server.registerTool(

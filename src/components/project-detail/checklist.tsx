@@ -387,7 +387,7 @@ export function Checklist({
             })
           }
           onToggle={() => actions.toggle(task)}
-          onPatch={(p) => actions.patch(task.id, p)}
+          onPatch={(p, undo) => actions.patch(task.id, p, undo)}
           onRemove={() => actions.removeTask(task)}
           onMove={(dir) => move(group, task.id, group[i + dir].id)}
           canMoveUp={i > 0}

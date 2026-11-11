@@ -75,7 +75,7 @@ describe("mcp endpoint", () => {
     expect((await init.json()).result.serverInfo.name).toBe("candid");
 
     const tools = (await (await rpc(token, "tools/list")).json()).result.tools.map((t: { name: string }) => t.name);
-    expect(tools).toEqual(expect.arrayContaining(["search", "get_project", "create_project", "update_task", "add_label_to_project"]));
+    expect(tools).toEqual(expect.arrayContaining(["search", "get_project", "create_project", "update_task", "add_label_to_project", "add_note", "list_members", "archive_project", "restore_project"]));
 
     const p = (await callTool(token, "create_project", { name: "Fasáda Novák", client: "Stavby Novák", tasks: ["Zaměření"] })).data;
     await callTool(token, "update_project", { projectId: p.id, status: "waiting", notes: "Hello", dueDate: "2026-12-01" });
@@ -113,5 +113,39 @@ describe("mcp endpoint", () => {
     expect((await callTool(token, "list_projects", {})).data).toHaveLength(0);
     expect((await callTool(token, "search", { query: "Secret" })).data.projects).toHaveLength(0);
     expect((await getProject(theirs, foreign.id)).project.status).toBe("active");
+  });
+
+  it("add_note appends, respects notesVersion; list_members; archive and restore", async () => {
+    const ctx = await makeCtx();
+    const { token } = await createApiToken(ctx, { name: "T" });
+    const p = (await callTool(token, "create_project", { name: "Notes", notes: "First" })).data;
+
+    const a = await callTool(token, "add_note", { projectId: p.id, text: "Second" });
+    expect(a.data.notesVersion).toBeGreaterThan(1);
+    expect((await getProject(ctx, p.id)).project.notes).toBe("First\n\nSecond");
+
+    const stale = await callTool(token, "add_note", { projectId: p.id, text: "Third", notesVersion: 1 });
+    expect(stale.isError).toBe(true);
+    expect(stale.text).toMatch(/conflict/);
+    expect((await getProject(ctx, p.id)).project.notes).toBe("First\n\nSecond");
+    expect((await callTool(token, "add_note", { projectId: p.id, text: "Third", notesVersion: a.data.notesVersion })).isError).toBe(false);
+
+    const empty = (await callTool(token, "create_project", { name: "Empty" })).data;
+    await callTool(token, "add_note", { projectId: empty.id, text: "Only" });
+    expect((await getProject(ctx, empty.id)).project.notes).toBe("Only");
+
+    const members = (await callTool(token, "list_members", {})).data;
+    expect(members).toEqual(expect.arrayContaining([expect.objectContaining({ id: ctx.membershipId, email: ctx.email })]));
+
+    expect((await callTool(token, "archive_project", { projectId: p.id })).data).toMatchObject({ archived: true });
+    expect((await callTool(token, "archive_project", { projectId: p.id })).data).toMatchObject({ archived: true }); // idempotent
+    expect((await getProject(ctx, p.id)).project.archivedAt).not.toBeNull();
+    expect((await callTool(token, "restore_project", { projectId: p.id })).data).toMatchObject({ archived: false });
+    expect((await getProject(ctx, p.id)).project.archivedAt).toBeNull();
+
+    const other = await makeCtx();
+    const foreign = await createProject(other, { name: "Theirs" });
+    expect((await callTool(token, "archive_project", { projectId: foreign.id })).isError).toBe(true);
+    expect((await callTool(token, "add_note", { projectId: foreign.id, text: "x" })).isError).toBe(true);
   });
 });

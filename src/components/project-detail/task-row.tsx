@@ -6,6 +6,8 @@ import { ArrowDown, ArrowUp, ChevronDown, GripVertical, MoreHorizontal, PanelBot
 import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ClickSpark from "@/components/ClickSpark";
 import { cssVar } from "@/lib/css-var";
 import SpringCheck from "@/components/SpringCheck";
@@ -19,14 +21,80 @@ import {
 import { Switch } from "@/components/ui/switch";
 import type { TaskPatch, TaskRow as Task } from "@/hooks/project-detail";
 import { fmt, t } from "@/i18n";
-import { dueState, formatDay } from "@/lib/dates";
+import { addDaysIso, dueState, formatDay, todayLocal } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { DateInput, MemberSelect, useMemberName } from "./fields";
 import { CommitInput, InlineText } from "./inline-text";
 import { TaskNote } from "./notes";
 
+/**
+ * The overdue label doubles as a small "postpone" menu: +1 day, +1 week (both counted from today,
+ * so the step is no longer late) or a picked date. One task patch, with Undo.
+ */
+function Postpone({ task, onPatch }: { task: Task; onPatch: TaskRowPatch }) {
+  const [open, setOpen] = useState(false);
+  const [pick, setPick] = useState("");
+  const today = todayLocal();
+  const title = { title: task.title };
+  const to = (date: string) => {
+    setOpen(false);
+    onPatch({ dueDate: date }, fmt(t.tasks.postponed, { date: formatDay(date, today)! }));
+  };
+  const option = (label: string, days: number) => {
+    const date = addDaysIso(today, days);
+    return (
+      <Button variant="ghost" size="sm" className="justify-between font-normal" onClick={() => to(date)}>
+        {label}
+        <span className="num text-xs text-muted-foreground">{formatDay(date, today)}</span>
+      </Button>
+    );
+  };
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o) setPick("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={fmt(t.tasks.postponeOf, title)}
+          title={t.tasks.postpone}
+          className="-mx-1 rounded px-1 font-medium text-negative underline decoration-negative/40 decoration-dotted underline-offset-2 hover:decoration-negative focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          {t.tasks.overdue} · <span className="num">{formatDay(task.dueDate)}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="grid w-56 gap-1 p-1.5">
+        <p className="px-2 pt-1 pb-0.5 text-xs text-muted-foreground">{t.tasks.postpone}</p>
+        {option(t.tasks.plusDay, 1)}
+        {option(t.tasks.plusWeek, 7)}
+        <form
+          className="mt-1 grid gap-1.5 border-t px-1 pt-2 pb-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (pick >= "1900-01-01") to(pick);
+          }}
+        >
+          <label className="grid gap-1 text-xs text-muted-foreground">
+            {t.tasks.pickDate}
+            <Input type="date" value={pick} min={today} onChange={(e) => setPick(e.target.value)} className="num h-8 dark:scheme-dark" />
+          </label>
+          <Button type="submit" size="sm" disabled={!pick}>
+            {t.tasks.bulkApply}
+          </Button>
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+type TaskRowPatch = (p: TaskPatch, undoLabel?: string) => void;
+
 /** Assignee, due date and waiting state on the row's second line. Overdue and waiting always carry a word. */
-function TaskMeta({ task }: { task: Task }) {
+function TaskMeta({ task, onPatch }: { task: Task; onPatch: TaskRowPatch }) {
   const name = useMemberName()(task.assigneeId);
   const due = task.done ? null : dueState(task.dueDate);
   const parts: React.ReactNode[] = [];
@@ -34,9 +102,7 @@ function TaskMeta({ task }: { task: Task }) {
   if (task.dueDate) {
     parts.push(
       due === "overdue" ? (
-        <span key="d" className="font-medium text-negative">
-          {t.tasks.overdue} · <span className="num">{formatDay(task.dueDate)}</span>
-        </span>
+        <Postpone key="d" task={task} onPatch={onPatch} />
       ) : (
         <span key="d" className="num">
           {fmt(t.tasks.dueOn, { date: formatDay(task.dueDate)! })}
@@ -131,7 +197,7 @@ export function TaskRow({
   selected: boolean;
   onSelect: (on: boolean) => void;
   onToggle: () => void;
-  onPatch: (p: TaskPatch) => void;
+  onPatch: TaskRowPatch;
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
   canMoveUp: boolean;
@@ -200,7 +266,7 @@ export function TaskRow({
           >
             {task.title}
           </InlineText>
-          <TaskMeta task={task} />
+          <TaskMeta task={task} onPatch={onPatch} />
         </div>
         <Button
           variant="ghost"
